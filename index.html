@@ -47,6 +47,13 @@
     width:100%;
     max-width:400px;
   }
+  .flag-strip{
+    display:flex;height:4px;width:88px;margin:0 auto 22px;border-radius:2px;overflow:hidden;
+  }
+  .flag-strip span{flex:1;}
+  .flag-strip .r1{background:#CE1126;}
+  .flag-strip .r2{background:#F6F0E4;}
+  .flag-strip .r3{background:#111;}
   .brand-mark{
     display:flex;align-items:center;justify-content:center;
     margin:0 auto 18px;
@@ -57,12 +64,34 @@
   }
   .brand-row{text-align:center;margin-bottom:2px;}
   .brand{font-size:34px;color:var(--text);letter-spacing:1px;}
+  .study-badge{
+    display:block;
+    width:fit-content;
+    margin:8px auto 0;
+    padding:4px 12px;
+    border:1px solid var(--ink-line-soft);
+    border-radius:20px;
+    font-size:11px;
+    color:var(--amber);
+    background:rgba(227,168,87,.06);
+  }
   .tagline{
     text-align:center;
     color:var(--text-dim);
     font-size:13.5px;
-    margin-bottom:34px;
+    margin-top:12px;
+    margin-bottom:10px;
   }
+  .study-footer{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:11.5px;
+    line-height:1.9;
+    margin-top:28px;
+    padding-top:18px;
+    border-top:1px solid var(--ink-line);
+  }
+  .study-footer b{color:var(--amber);font-weight:600;}
   .pane{display:none;}
   .pane.active{display:block;}
  
@@ -123,16 +152,6 @@
   .field .hint{font-size:11.5px;color:var(--text-dim);margin-top:5px;}
   .field .hint.bad{color:var(--danger);}
   .field .hint.good{color:var(--ok);}
- 
-  .captcha-row{
-    display:flex;align-items:center;gap:10px;
-    background:var(--well-2);border:1px solid var(--ink-line-soft);
-    border-radius:8px;padding:10px 14px;margin-bottom:15px;
-  }
-  .captcha-q{font-family:'Amiri',serif;font-size:19px;color:var(--amber);white-space:nowrap;}
-  .captcha-row input{flex:1;padding:8px 10px;border:1px solid var(--ink-line-soft);border-radius:6px;background:var(--well);color:var(--text);width:70px;}
-  .captcha-refresh{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:4px;}
-  .captcha-refresh:hover{color:var(--amber);}
  
   .btn{
     display:block;width:100%;padding:14px;
@@ -259,8 +278,10 @@
 <!-- ============ شاشة الدخول ============ -->
 <div id="authScreen">
   <div class="card">
+    <div class="flag-strip"><span class="r1"></span><span class="r2"></span><span class="r3"></span></div>
     <div class="brand-mark">م</div>
     <div class="brand-row"><span class="brand">مِداد</span></div>
+    <span class="study-badge">🎓 مشروع دراسي — تصميم وتطوير عراقي</span>
     <p class="tagline">مساحتك للمراسلة، ببساطة</p>
  
     <div id="authError" class="error-msg hidden"></div>
@@ -283,11 +304,6 @@
       <div class="field">
         <label for="quickName">الاسم</label>
         <input type="text" id="quickName" placeholder="مثال: سارة أحمد" maxlength="40">
-      </div>
-      <div class="captcha-row">
-        <span class="captcha-q" id="quickCaptchaQ"></span>
-        <input type="text" id="quickCaptchaA" placeholder="الناتج" inputmode="numeric">
-        <button type="button" class="captcha-refresh" data-refresh="quick" title="تحديث">⟳</button>
       </div>
       <button class="btn" id="quickSignupBtn">إنشاء الحساب والدخول</button>
     </div>
@@ -326,11 +342,6 @@
         <label for="createPassword">كلمة المرور</label>
         <input type="password" id="createPassword" style="direction:ltr;text-align:right;" placeholder="8 أحرف على الأقل">
       </div>
-      <div class="captcha-row">
-        <span class="captcha-q" id="createCaptchaQ"></span>
-        <input type="text" id="createCaptchaA" placeholder="الناتج" inputmode="numeric">
-        <button type="button" class="captcha-refresh" data-refresh="create" title="تحديث">⟳</button>
-      </div>
       <button class="btn" id="createBtn">إنشاء الحساب</button>
     </div>
  
@@ -345,6 +356,11 @@
       <p class="warn-note">⚠️ احفظ اسم المستخدم وكلمة المرور في مكان آمن. ستحتاجهما لتسجيل الدخول لاحقًا.</p>
       <button class="btn" id="continueBtn">متابعة إلى مِداد</button>
     </div>
+ 
+    <p class="study-footer">
+      تطبيق <b>مِداد</b> مشروع مُقدَّم لأغراض دراسية وتعليمية بحتة —
+      صُمِّم وطُوِّر بأيدٍ عراقية 🇮🇶، وليس منتجًا تجاريًا.
+    </p>
   </div>
 </div>
  
@@ -438,7 +454,6 @@ let myConversationIds = new Set();
 let activeConversationId = null;
 let activeChannel = null;
 let mediaRecorder = null, recordedChunks = [], recording = false;
-let captchas = {}; // {quick:{a,b}, create:{a,b}}
  
 /* ============ أدوات مساعدة ============ */
 function toast(msg){
@@ -486,30 +501,15 @@ function escapeHtml(s){
   return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 }
  
-/* ============ التحقق البشري (كابتشا بسيطة) ============ */
-function newCaptcha(key){
-  const a = Math.floor(Math.random()*8)+2, b = Math.floor(Math.random()*8)+1;
-  captchas[key] = a+b;
-  document.getElementById(key+'CaptchaQ').textContent = `${a} + ${b} = ؟`;
-  document.getElementById(key+'CaptchaA').value = '';
-}
-function checkCaptcha(key){
-  const val = document.getElementById(key+'CaptchaA').value.trim();
-  return val !== '' && Number(val) === captchas[key];
-}
-document.querySelectorAll('[data-refresh]').forEach(b=>{
-  b.addEventListener('click', ()=> newCaptcha(b.getAttribute('data-refresh')));
-});
- 
 /* ============ التنقل بين الشاشات ============ */
 function showPane(id){
   clearError();
   document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
   document.getElementById(id).classList.add('active');
 }
-document.getElementById('goQuick').addEventListener('click', ()=>{ showPane('pane-quick'); newCaptcha('quick'); });
+document.getElementById('goQuick').addEventListener('click', ()=> showPane('pane-quick'));
 document.getElementById('goLogin').addEventListener('click', ()=> showPane('pane-login'));
-document.getElementById('goCreate').addEventListener('click', ()=>{ showPane('pane-create'); newCaptcha('create'); });
+document.getElementById('goCreate').addEventListener('click', ()=> showPane('pane-create'));
 document.querySelectorAll('[data-back]').forEach(b=> b.addEventListener('click', ()=> showPane('pane-choice')));
  
 document.getElementById('createUsername').addEventListener('input', e=>{
@@ -522,7 +522,6 @@ document.getElementById('quickSignupBtn').addEventListener('click', async ()=>{
   if(!sb){ showError('لم يتم تحميل الاتصال بالخادم بعد. أعد تحميل الصفحة.'); return; }
   const name = document.getElementById('quickName').value.trim();
   if(!name){ showError('يرجى كتابة الاسم'); return; }
-  if(!checkCaptcha('quick')){ showError('التحقق من أنك إنسان غير صحيح، حاول مجددًا'); newCaptcha('quick'); return; }
  
   const btn = document.getElementById('quickSignupBtn');
   btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
@@ -562,7 +561,6 @@ document.getElementById('createBtn').addEventListener('click', async ()=>{
   if(!name){ showError('يرجى كتابة الاسم'); return; }
   if(username.length < 3 || username.length > 20){ showError('اسم المستخدم يجب أن يكون بين 3 و20 حرفًا'); return; }
   if(password.length < 8){ showError('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
-  if(!checkCaptcha('create')){ showError('التحقق من أنك إنسان غير صحيح، حاول مجددًا'); newCaptcha('create'); return; }
  
   const btn = document.getElementById('createBtn');
   btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
