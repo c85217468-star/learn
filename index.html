@@ -188,12 +188,7 @@
  
   /* ===== التطبيق ===== */
   #app{min-height:100vh;background:var(--parchment);color:#231F16;display:flex;flex-direction:column;}
-  header.topbar{
-    background:var(--well);border-bottom:1px solid var(--ink-line);
-    padding:14px 20px;display:flex;align-items:center;justify-content:center;
-  }
-  header.topbar .brand{font-size:21px;color:var(--amber);}
-  main.content{flex:1;max-width:640px;width:100%;margin:0 auto;padding:20px;padding-bottom:90px;}
+  main.content{flex:1;max-width:640px;width:100%;margin:0 auto;padding:20px;padding-top:calc(20px + env(safe-area-inset-top));padding-bottom:90px;}
   nav.tabbar{
     position:fixed;bottom:0;left:0;right:0;
     background:var(--well);border-top:1px solid var(--ink-line);
@@ -214,21 +209,53 @@
   .welcome-card h3{color:#231F16;}
   .welcome-card p{color:#6B6250;margin-top:8px;line-height:1.8;}
  
-  .search-row{display:flex;gap:8px;margin-bottom:16px;}
-  .search-row input{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:8px;background:#fff;}
-  .search-row button{padding:0 18px;border:none;border-radius:8px;background:var(--well);color:var(--text);cursor:pointer;}
- 
-  .user-item,.conv-item{
-    display:flex;align-items:center;justify-content:space-between;
-    background:#fff;border:1px solid #E2D8C0;border-radius:10px;
-    padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  .search-row{position:relative;margin-bottom:6px;}
+  .search-row input{
+    width:100%;padding:12px 42px 12px 14px;border:1px solid #E2D8C0;border-radius:10px;
+    background:#fff;font-size:14.5px;
   }
-  .who{display:flex;flex-direction:column;gap:2px;}
+  .search-row input:focus{outline:none;border-color:var(--amber);}
+  .search-spinner{
+    position:absolute;top:50%;left:14px;transform:translateY(-50%);
+    width:16px;height:16px;border:2px solid #E2D8C0;border-top-color:var(--amber);
+    border-radius:50%;animation:spin .7s linear infinite;display:none;
+  }
+  .search-spinner.on{display:block;}
+  @keyframes spin{to{transform:translateY(-50%) rotate(360deg);}}
+ 
+  .avatar{
+    width:42px;height:42px;border-radius:50%;flex-shrink:0;
+    display:flex;align-items:center;justify-content:center;
+    background:linear-gradient(135deg, var(--amber), var(--amber-dark));
+    color:#20180C;font-weight:700;font-size:16px;font-family:'Amiri',serif;
+  }
+  .user-item,.conv-item{
+    display:flex;align-items:center;gap:12px;
+    background:#fff;border:1px solid #E2D8C0;border-radius:12px;
+    padding:11px 14px;margin-bottom:8px;cursor:pointer;
+    transition:border-color .15s, transform .1s;
+  }
+  .user-item:hover,.conv-item:hover{border-color:var(--amber);}
+  .user-item:active,.conv-item:active{transform:scale(.99);}
+  .who{display:flex;flex-direction:column;gap:2px;flex:1;min-width:0;}
   .who .name{font-weight:700;font-size:15px;color:#231F16;}
-  .who .uname{font-size:12.5px;color:#6B6250;direction:ltr;text-align:right;}
-  .msg-btn{background:var(--amber);color:#20180C;border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:700;}
+  .who .uname{font-size:12px;color:#6B6250;direction:ltr;text-align:right;}
+  .who .preview{font-size:12.5px;color:#8A8168;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+  .conv-meta{display:flex;flex-direction:column;align-items:flex-end;gap:4px;flex-shrink:0;}
+  .conv-time{font-size:10.5px;color:#A39A82;}
+  .msg-btn{background:var(--amber);color:#20180C;border:none;border-radius:20px;padding:7px 16px;font-size:12.5px;cursor:pointer;font-weight:700;flex-shrink:0;}
   .empty-hint{color:#6B6250;font-size:13.5px;text-align:center;padding:24px 8px;}
   .section-label{font-size:12px;color:#6B6250;margin:18px 0 8px;}
+  .skeleton-row{
+    display:flex;align-items:center;gap:12px;background:#fff;border:1px solid #E2D8C0;
+    border-radius:12px;padding:11px 14px;margin-bottom:8px;
+  }
+  .skeleton-circle{width:42px;height:42px;border-radius:50%;background:#EFE6D0;flex-shrink:0;}
+  .skeleton-lines{flex:1;display:flex;flex-direction:column;gap:6px;}
+  .skeleton-line{height:9px;border-radius:4px;background:#EFE6D0;}
+  .skeleton-line.short{width:40%;}
+  .skeleton-circle,.skeleton-line{animation:shimmer 1.1s ease-in-out infinite alternate;}
+  @keyframes shimmer{from{opacity:.5;}to{opacity:1;}}
  
   #chatView{position:fixed;inset:0;background:var(--parchment);display:flex;flex-direction:column;z-index:50;}
   #chatView.hidden{display:none;}
@@ -242,6 +269,19 @@
   .bubble img{max-width:220px;border-radius:6px;display:block;}
   .bubble audio{width:220px;}
   .bubble .time{font-size:10.5px;opacity:.7;margin-top:4px;display:block;}
+  .bubble.pop-in{animation:bubblePop .32s cubic-bezier(.34,1.56,.64,1) both;}
+  @keyframes bubblePop{
+    from{opacity:0;transform:translateY(10px) scale(.88);}
+    to{opacity:1;transform:translateY(0) scale(1);}
+  }
+  .bubble.typing-bubble{display:inline-flex;align-items:center;gap:4px;padding:12px 15px;}
+  .typing-dot{width:6px;height:6px;border-radius:50%;background:#9a8f74;animation:typingBounce 1.2s infinite ease-in-out both;}
+  .typing-dot:nth-child(2){animation-delay:.15s;}
+  .typing-dot:nth-child(3){animation-delay:.3s;}
+  @keyframes typingBounce{
+    0%,60%,100%{transform:translateY(0);opacity:.45;}
+    30%{transform:translateY(-4px);opacity:1;}
+  }
   .chat-input{background:#fff;border-top:1px solid #E2D8C0;padding:10px;display:flex;align-items:center;gap:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom));}
   .chat-input input[type=text]{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:20px;background:var(--parchment);}
   .icon-btn{background:none;border:none;font-size:19px;cursor:pointer;color:#6B6250;width:38px;height:38px;border-radius:50%;flex-shrink:0;}
@@ -366,8 +406,6 @@
  
 <!-- ============ التطبيق ============ -->
 <div id="app" class="hidden">
-  <header class="topbar"><span class="brand">مِداد</span></header>
- 
   <nav class="tabbar">
     <button class="tab-btn active" data-tab="home"><span class="tab-icon">⌂</span>الرئيسية</button>
     <button class="tab-btn" data-tab="messages"><span class="tab-icon">✉</span>المراسلات</button>
@@ -386,8 +424,8 @@
     <section id="tab-messages" class="hidden">
       <h2 class="section-title">المراسلات</h2>
       <div class="search-row">
-        <input type="text" id="searchInput" placeholder="ابحث باسم المستخدم...">
-        <button id="searchBtn">بحث</button>
+        <input type="text" id="searchInput" placeholder="ابحث باسم المستخدم..." autocomplete="off">
+        <span class="search-spinner" id="searchSpinner"></span>
       </div>
       <div id="searchResults"></div>
       <div class="section-label">المحادثات</div>
@@ -657,25 +695,62 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
   });
 });
  
-/* ============ البحث عن مستخدمين ============ */
-document.getElementById('searchBtn').addEventListener('click', searchUsers);
-document.getElementById('searchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') searchUsers(); });
-async function searchUsers(){
+/* ============ أدوات عرض ============ */
+function initials(name){
+  const parts = (name||'').trim().split(/\s+/);
+  return ((parts[0]||'')[0] || 'م').toUpperCase();
+}
+function avatarHtml(name){
+  return `<div class="avatar">${escapeHtml(initials(name))}</div>`;
+}
+function relTime(ts){
+  const diff = (Date.now() - new Date(ts).getTime()) / 1000;
+  if(diff < 60) return 'الآن';
+  if(diff < 3600) return Math.floor(diff/60) + ' د';
+  if(diff < 86400) return Math.floor(diff/3600) + ' س';
+  if(diff < 604800) return Math.floor(diff/86400) + ' يوم';
+  return new Date(ts).toLocaleDateString('ar');
+}
+function skeletonRows(n){
+  let html = '';
+  for(let i=0;i<n;i++){
+    html += `<div class="skeleton-row"><div class="skeleton-circle"></div><div class="skeleton-lines"><div class="skeleton-line" style="width:55%"></div><div class="skeleton-line short"></div></div></div>`;
+  }
+  return html;
+}
+ 
+/* ============ البحث السلس عن مستخدمين ============ */
+let searchDebounce = null;
+let searchSeq = 0;
+document.getElementById('searchInput').addEventListener('input', ()=>{
+  clearTimeout(searchDebounce);
   const q = document.getElementById('searchInput').value.trim();
   const box = document.getElementById('searchResults');
-  box.innerHTML = '';
-  if(!q) return;
-  const { data, error } = await sb.from('profiles').select('id,username,display_name')
-    .ilike('username', `%${q}%`).neq('id', me.id).limit(10);
-  if(error){ toast('تعذّر البحث'); return; }
-  if(!data.length){ box.innerHTML = '<p class="empty-hint">لا نتائج</p>'; return; }
-  data.forEach(u=>{
-    const el = document.createElement('div');
-    el.className = 'user-item';
-    el.innerHTML = `<div class="who"><span class="name">${escapeHtml(u.display_name)}</span><span class="uname">${escapeHtml(u.username)}</span></div><button class="msg-btn">مراسلة</button>`;
-    el.querySelector('.msg-btn').addEventListener('click', ()=> startConversation(u.id, u.display_name));
-    box.appendChild(el);
-  });
+  if(!q){ box.innerHTML=''; document.getElementById('searchSpinner').classList.remove('on'); return; }
+  document.getElementById('searchSpinner').classList.add('on');
+  searchDebounce = setTimeout(()=> searchUsers(q), 300);
+});
+async function searchUsers(q){
+  const mySeq = ++searchSeq;
+  const box = document.getElementById('searchResults');
+  try{
+    const { data, error } = await sb.from('profiles').select('id,username,display_name')
+      .ilike('username', `%${q}%`).neq('id', me.id).limit(12);
+    if(mySeq !== searchSeq) return; // نتيجة بحث قديمة، تجاهلها
+    if(error){ toast('تعذّر البحث'); return; }
+    if(!data.length){ box.innerHTML = '<p class="empty-hint">لا يوجد مستخدم بهذا الاسم</p>'; return; }
+    box.innerHTML = '';
+    data.forEach(u=>{
+      const el = document.createElement('div');
+      el.className = 'user-item';
+      el.innerHTML = `${avatarHtml(u.display_name)}<div class="who"><span class="name">${escapeHtml(u.display_name)}</span><span class="uname">${escapeHtml(u.username)}</span></div><button class="msg-btn">مراسلة</button>`;
+      el.querySelector('.msg-btn').addEventListener('click', (ev)=>{ ev.stopPropagation(); startConversation(u.id, u.display_name); });
+      el.addEventListener('click', ()=> startConversation(u.id, u.display_name));
+      box.appendChild(el);
+    });
+  }finally{
+    if(mySeq === searchSeq) document.getElementById('searchSpinner').classList.remove('on');
+  }
 }
  
 /* ============ إنشاء / فتح محادثة ============ */
@@ -693,16 +768,19 @@ async function startConversation(otherId, otherName){
       const { data: conv, error: convErr } = await sb.from('conversations').insert({}).select().single();
       if(convErr) throw convErr;
       convId = conv.id;
-      const { error: memErr } = await sb.from('conversation_members').insert([
-        { conversation_id: convId, user_id: me.id },
-        { conversation_id: convId, user_id: otherId }
-      ]);
-      if(memErr) throw memErr;
+      /* يجب إدخال عضويتي أولًا في طلب منفصل حتى تصبح مرئية لسياسة RLS
+         الخاصة بإدخال عضوية الطرف الآخر (فحصها يعتمد على وجود صفي كعضو). */
+      const { error: memErrMe } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: me.id });
+      if(memErrMe) throw memErrMe;
+      const { error: memErrOther } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: otherId });
+      if(memErrOther) throw memErrOther;
       myConversationIds.add(convId);
     }
+    document.getElementById('searchInput').value = '';
+    document.getElementById('searchResults').innerHTML = '';
     openChat(convId, otherName);
     loadConversationsList();
-  }catch(err){ toast('تعذّر بدء المحادثة'); }
+  }catch(err){ toast('تعذّر بدء المحادثة: ' + (err.message || '')); }
 }
  
 /* ============ قائمة المحادثات ============ */
@@ -712,21 +790,40 @@ async function loadMyConversationIds(){
 }
 async function loadConversationsList(){
   const box = document.getElementById('convList');
+  box.innerHTML = skeletonRows(3);
   const { data: mine } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
-  if(!mine || !mine.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد.</p>'; return; }
+  if(!mine || !mine.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد. ابحث عن مستخدم بالأعلى لبدء أول محادثة.</p>'; return; }
   const convIds = mine.map(r=>r.conversation_id);
   const { data: others } = await sb.from('conversation_members').select('conversation_id,user_id').in('conversation_id', convIds).neq('user_id', me.id);
-  if(!others || !others.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد.</p>'; return; }
+  if(!others || !others.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد. ابحث عن مستخدم بالأعلى لبدء أول محادثة.</p>'; return; }
   const otherIds = [...new Set(others.map(r=>r.user_id))];
   const { data: profs } = await sb.from('profiles').select('id,username,display_name').in('id', otherIds);
   const profMap = {}; (profs||[]).forEach(p=> profMap[p.id]=p);
+ 
+  const { data: lastMsgs } = await sb.from('messages').select('conversation_id,type,content,created_at')
+    .in('conversation_id', convIds).order('created_at', {ascending:false});
+  const lastByConv = {};
+  (lastMsgs||[]).forEach(m=>{ if(!lastByConv[m.conversation_id]) lastByConv[m.conversation_id] = m; });
+ 
+  const rows = others.filter(row=> profMap[row.user_id]).map(row=>{
+    const last = lastByConv[row.conversation_id];
+    return { row, p: profMap[row.user_id], last, ts: last ? new Date(last.created_at).getTime() : 0 };
+  }).sort((a,b)=> b.ts - a.ts);
+ 
+  if(!rows.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد.</p>'; return; }
   box.innerHTML = '';
-  others.forEach(row=>{
-    const p = profMap[row.user_id];
-    if(!p) return;
+  rows.forEach(({row, p, last})=>{
+    const previewText = !last ? 'ابدأ المحادثة الآن' :
+      last.type === 'text' ? escapeHtml(last.content) :
+      last.type === 'image' ? '📷 صورة' : '🎙 رسالة صوتية';
     const el = document.createElement('div');
     el.className = 'conv-item';
-    el.innerHTML = `<div class="who"><span class="name">${escapeHtml(p.display_name)}</span><span class="uname">${escapeHtml(p.username)}</span></div><span>›</span>`;
+    el.innerHTML = `${avatarHtml(p.display_name)}
+      <div class="who">
+        <span class="name">${escapeHtml(p.display_name)}</span>
+        <span class="preview">${previewText}</span>
+      </div>
+      <div class="conv-meta">${last ? `<span class="conv-time">${relTime(last.created_at)}</span>` : ''}</div>`;
     el.addEventListener('click', ()=> openChat(row.conversation_id, p.display_name));
     box.appendChild(el);
   });
@@ -740,30 +837,66 @@ async function openChat(convId, otherName){
   document.getElementById('chatView').classList.remove('hidden');
  
   const { data: msgs, error } = await sb.from('messages').select('*').eq('conversation_id', convId).order('created_at', {ascending:true});
-  if(!error && msgs){ msgs.forEach(m=> renderMessage(m)); scrollChatBottom(); }
+  if(!error && msgs){ msgs.forEach(m=> renderMessage(m, false)); scrollChatBottom(); }
  
   if(activeChannel){ sb.removeChannel(activeChannel); }
-  activeChannel = sb.channel('conv-'+convId)
+  activeChannel = sb.channel('conv-'+convId, { config: { broadcast: { self: false } } })
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:`conversation_id=eq.${convId}`}, payload=>{
       if(payload.new.sender_id === me.id) return;
+      hideTypingIndicator();
       renderMessage(payload.new);
       scrollChatBottom();
-    }).subscribe();
+    })
+    .on('broadcast', {event:'typing'}, payload=>{
+      if(payload.payload && payload.payload.sender === me.id) return;
+      showTypingIndicator();
+    })
+    .subscribe();
 }
 document.getElementById('chatBackBtn').addEventListener('click', ()=>{
   document.getElementById('chatView').classList.add('hidden');
+  hideTypingIndicator();
   if(activeChannel){ sb.removeChannel(activeChannel); activeChannel = null; }
   activeConversationId = null;
+});
+ 
+/* ============ مؤشر "يكتب الآن" ============ */
+let typingHideTimer = null;
+function showTypingIndicator(){
+  let el = document.getElementById('typingBubble');
+  if(!el){
+    el = document.createElement('div');
+    el.id = 'typingBubble';
+    el.className = 'bubble theirs typing-bubble pop-in';
+    el.innerHTML = '<span class="typing-dot"></span><span class="typing-dot"></span><span class="typing-dot"></span>';
+    document.getElementById('chatMessages').appendChild(el);
+    scrollChatBottom();
+  }
+  clearTimeout(typingHideTimer);
+  typingHideTimer = setTimeout(hideTypingIndicator, 2500);
+}
+function hideTypingIndicator(){
+  clearTimeout(typingHideTimer);
+  const el = document.getElementById('typingBubble');
+  if(el) el.remove();
+}
+let lastTypingBroadcast = 0;
+document.getElementById('msgInput').addEventListener('input', ()=>{
+  if(!activeChannel || !activeConversationId) return;
+  const now = Date.now();
+  if(now - lastTypingBroadcast < 1800) return;
+  lastTypingBroadcast = now;
+  activeChannel.send({ type:'broadcast', event:'typing', payload:{ sender: me.id } });
 });
 function scrollChatBottom(){
   const box = document.getElementById('chatMessages');
   box.scrollTop = box.scrollHeight;
 }
-async function renderMessage(m){
+async function renderMessage(m, animate=true){
   const box = document.getElementById('chatMessages');
   const mine = m.sender_id === me.id;
   const bubble = document.createElement('div');
-  bubble.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  bubble.className = 'bubble ' + (mine ? 'mine' : 'theirs') + (animate ? ' pop-in' : '');
   if(m.type === 'text'){
     bubble.innerHTML = `<span>${escapeHtml(m.content)}</span><span class="time">${fmtTime(m.created_at)}</span>`;
     box.appendChild(bubble);
