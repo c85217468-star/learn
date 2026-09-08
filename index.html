@@ -1,0 +1,910 @@
+<!DOCTYPE html>
+<html lang="ar" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1">
+<title>مِداد</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Amiri:wght@400;700&family=IBM+Plex+Sans+Arabic:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --well:#12181A;        /* دواة الحبر - خلفية داكنة */
+    --well-2:#1B2426;
+    --parchment:#F6F0E4;   /* الورق */
+    --ink-line:#2C3A3D;
+    --ink-line-soft:#3A4A4E;
+    --amber:#E3A857;       /* لمعة الحبر */
+    --amber-dark:#C48A3C;
+    --text:#EDE7D8;
+    --text-dim:#9DA8A6;
+    --danger:#E07A5F;
+    --ok:#7FB88B;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;height:100%;}
+  body{
+    background:var(--well);
+    color:var(--text);
+    font-family:'IBM Plex Sans Arabic',sans-serif;
+    -webkit-font-smoothing:antialiased;
+    min-height:100vh;
+  }
+  h1,h2,h3,.brand{font-family:'Amiri',serif;}
+  button,input{font-family:inherit;}
+ 
+  /* ===== شاشة الدخول ===== */
+  #authScreen{
+    min-height:100vh;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    padding:24px;
+    background:
+      radial-gradient(circle at 50% 0%, rgba(227,168,87,.08), transparent 55%),
+      var(--well);
+  }
+  .card{
+    width:100%;
+    max-width:400px;
+  }
+  .brand-mark{
+    display:flex;align-items:center;justify-content:center;
+    margin:0 auto 18px;
+    width:56px;height:56px;border-radius:50%;
+    border:1.5px solid var(--amber);
+    color:var(--amber);
+    font-family:'Amiri',serif;font-size:26px;
+  }
+  .brand-row{text-align:center;margin-bottom:2px;}
+  .brand{font-size:34px;color:var(--text);letter-spacing:1px;}
+  .tagline{
+    text-align:center;
+    color:var(--text-dim);
+    font-size:13.5px;
+    margin-bottom:34px;
+  }
+  .pane{display:none;}
+  .pane.active{display:block;}
+ 
+  .choice-btn{
+    width:100%;
+    padding:15px 18px;
+    border-radius:10px;
+    font-size:15px;
+    cursor:pointer;
+    margin-bottom:12px;
+    text-align:center;
+    border:1px solid var(--ink-line-soft);
+    background:var(--well-2);
+    color:var(--text);
+    transition:border-color .15s;
+  }
+  .choice-btn:hover{border-color:var(--amber);}
+  .choice-btn.primary{
+    background:var(--amber);
+    color:#20180C;
+    border-color:var(--amber);
+    font-weight:700;
+    font-size:16px;
+    padding:17px 18px;
+  }
+  .choice-btn.primary:hover{background:var(--amber-dark);}
+  .choice-btn .sub{display:block;font-size:12px;color:var(--text-dim);margin-top:3px;font-weight:400;}
+  .choice-btn.primary .sub{color:#4A3A1E;}
+ 
+  .back-link{
+    display:inline-flex;align-items:center;gap:4px;
+    color:var(--text-dim);font-size:13px;cursor:pointer;
+    margin-bottom:18px;
+  }
+  .back-link:hover{color:var(--amber);}
+ 
+  .pane-title{font-size:19px;margin:0 0 4px;color:var(--text);}
+  .pane-desc{font-size:13px;color:var(--text-dim);margin:0 0 22px;line-height:1.7;}
+ 
+  .field{margin-bottom:15px;}
+  .field label{
+    display:block;
+    font-size:12.5px;
+    color:var(--text-dim);
+    margin-bottom:6px;
+  }
+  .field input{
+    width:100%;
+    padding:12px 14px;
+    border:1px solid var(--ink-line-soft);
+    border-radius:8px;
+    background:var(--well-2);
+    color:var(--text);
+    font-size:15px;
+  }
+  .field input::placeholder{color:#5C6866;}
+  .field input:focus{outline:none;border-color:var(--amber);}
+  .field .hint{font-size:11.5px;color:var(--text-dim);margin-top:5px;}
+  .field .hint.bad{color:var(--danger);}
+  .field .hint.good{color:var(--ok);}
+ 
+  .captcha-row{
+    display:flex;align-items:center;gap:10px;
+    background:var(--well-2);border:1px solid var(--ink-line-soft);
+    border-radius:8px;padding:10px 14px;margin-bottom:15px;
+  }
+  .captcha-q{font-family:'Amiri',serif;font-size:19px;color:var(--amber);white-space:nowrap;}
+  .captcha-row input{flex:1;padding:8px 10px;border:1px solid var(--ink-line-soft);border-radius:6px;background:var(--well);color:var(--text);width:70px;}
+  .captcha-refresh{background:none;border:none;color:var(--text-dim);cursor:pointer;font-size:16px;padding:4px;}
+  .captcha-refresh:hover{color:var(--amber);}
+ 
+  .btn{
+    display:block;width:100%;padding:14px;
+    border:none;border-radius:8px;
+    background:var(--amber);color:#20180C;
+    font-size:15px;font-weight:700;cursor:pointer;
+  }
+  .btn:hover{background:var(--amber-dark);}
+  .btn:disabled{opacity:.5;cursor:default;}
+ 
+  .error-msg{
+    background:rgba(224,122,95,.12);
+    color:var(--danger);
+    border:1px solid rgba(224,122,95,.35);
+    padding:10px 13px;border-radius:8px;font-size:13px;margin-bottom:16px;line-height:1.6;
+  }
+ 
+  .cred-box{
+    background:var(--well-2);border:1px dashed var(--ink-line-soft);
+    border-radius:10px;padding:16px;margin-bottom:14px;
+  }
+  .cred-row{display:flex;align-items:center;justify-content:space-between;padding:9px 0;border-bottom:1px solid var(--ink-line);}
+  .cred-row:last-child{border-bottom:none;}
+  .cred-label{font-size:12px;color:var(--text-dim);}
+  .cred-value{font-size:15px;font-weight:700;direction:ltr;text-align:left;font-family:monospace;color:var(--text);}
+  .copy-btn{
+    background:none;border:1px solid var(--ink-line-soft);border-radius:6px;
+    padding:4px 10px;font-size:11.5px;cursor:pointer;color:var(--text-dim);
+    margin-inline-start:10px;
+  }
+  .copy-btn:hover{border-color:var(--amber);color:var(--amber);}
+  .warn-note{font-size:12px;color:var(--amber);margin:14px 0;line-height:1.7;}
+  .hidden{display:none !important;}
+ 
+  /* ===== التطبيق ===== */
+  #app{min-height:100vh;background:var(--parchment);color:#231F16;display:flex;flex-direction:column;}
+  header.topbar{
+    background:var(--well);border-bottom:1px solid var(--ink-line);
+    padding:14px 20px;display:flex;align-items:center;justify-content:center;
+  }
+  header.topbar .brand{font-size:21px;color:var(--amber);}
+  main.content{flex:1;max-width:640px;width:100%;margin:0 auto;padding:20px;padding-bottom:90px;}
+  nav.tabbar{
+    position:fixed;bottom:0;left:0;right:0;
+    background:var(--well);border-top:1px solid var(--ink-line);
+    display:flex;padding-bottom:env(safe-area-inset-bottom);
+  }
+  nav.tabbar button{
+    flex:1;background:none;border:none;padding:12px 6px 10px;
+    color:var(--text-dim);font-size:13px;cursor:pointer;border-top:2px solid transparent;
+  }
+  nav.tabbar button.active{color:var(--amber);border-top-color:var(--amber);font-weight:700;}
+  .tab-icon{display:block;font-size:19px;margin-bottom:2px;}
+ 
+  .section-title{font-size:20px;margin:0 0 16px;color:#231F16;}
+  .welcome-card{
+    background:#fff;border:1px solid #E2D8C0;border-radius:12px;
+    padding:28px;text-align:center;
+  }
+  .welcome-card h3{color:#231F16;}
+  .welcome-card p{color:#6B6250;margin-top:8px;line-height:1.8;}
+ 
+  .search-row{display:flex;gap:8px;margin-bottom:16px;}
+  .search-row input{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:8px;background:#fff;}
+  .search-row button{padding:0 18px;border:none;border-radius:8px;background:var(--well);color:var(--text);cursor:pointer;}
+ 
+  .user-item,.conv-item{
+    display:flex;align-items:center;justify-content:space-between;
+    background:#fff;border:1px solid #E2D8C0;border-radius:10px;
+    padding:12px 14px;margin-bottom:8px;cursor:pointer;
+  }
+  .who{display:flex;flex-direction:column;gap:2px;}
+  .who .name{font-weight:700;font-size:15px;color:#231F16;}
+  .who .uname{font-size:12.5px;color:#6B6250;direction:ltr;text-align:right;}
+  .msg-btn{background:var(--amber);color:#20180C;border:none;border-radius:6px;padding:7px 14px;font-size:13px;cursor:pointer;font-weight:700;}
+  .empty-hint{color:#6B6250;font-size:13.5px;text-align:center;padding:24px 8px;}
+  .section-label{font-size:12px;color:#6B6250;margin:18px 0 8px;}
+ 
+  #chatView{position:fixed;inset:0;background:var(--parchment);display:flex;flex-direction:column;z-index:50;}
+  #chatView.hidden{display:none;}
+  .chat-header{background:var(--well);padding:12px 16px;display:flex;align-items:center;gap:10px;}
+  .chat-header button{background:none;border:none;font-size:20px;cursor:pointer;color:var(--amber);padding:4px 8px;}
+  .chat-header .who-name{font-weight:700;color:var(--text);}
+  .chat-messages{flex:1;overflow-y:auto;padding:16px;display:flex;flex-direction:column;gap:10px;}
+  .bubble{max-width:75%;padding:9px 13px;border-radius:12px;font-size:14.5px;line-height:1.6;}
+  .bubble.mine{align-self:flex-end;background:var(--amber);color:#20180C;border-bottom-left-radius:3px;}
+  .bubble.theirs{align-self:flex-start;background:#fff;border:1px solid #E2D8C0;border-bottom-right-radius:3px;color:#231F16;}
+  .bubble img{max-width:220px;border-radius:6px;display:block;}
+  .bubble audio{width:220px;}
+  .bubble .time{font-size:10.5px;opacity:.7;margin-top:4px;display:block;}
+  .chat-input{background:#fff;border-top:1px solid #E2D8C0;padding:10px;display:flex;align-items:center;gap:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom));}
+  .chat-input input[type=text]{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:20px;background:var(--parchment);}
+  .icon-btn{background:none;border:none;font-size:19px;cursor:pointer;color:#6B6250;width:38px;height:38px;border-radius:50%;flex-shrink:0;}
+  .icon-btn:hover{background:#EFE6D0;}
+  .icon-btn.recording{color:var(--danger);animation:pulse 1s infinite;}
+  @keyframes pulse{0%,100%{opacity:1;}50%{opacity:.4;}}
+  .send-btn{background:var(--amber);color:#20180C;border:none;border-radius:50%;width:38px;height:38px;font-size:16px;cursor:pointer;flex-shrink:0;}
+ 
+  .acc-row{background:#fff;border:1px solid #E2D8C0;border-radius:10px;padding:16px;margin-bottom:12px;}
+  .acc-row .lbl{font-size:12px;color:#6B6250;margin-bottom:4px;}
+  .acc-row .val{font-size:16px;font-weight:700;color:#231F16;}
+  .acc-row .val.uname{direction:ltr;text-align:right;font-family:monospace;font-weight:400;}
+  .acc-edit-row{display:flex;gap:8px;margin-top:10px;}
+  .acc-edit-row input{flex:1;padding:9px 12px;border:1px solid #E2D8C0;border-radius:6px;}
+  .acc-edit-row button{padding:9px 14px;border:none;border-radius:6px;background:var(--well);color:var(--text);cursor:pointer;}
+  .logout-btn{width:100%;padding:13px;border:1px solid var(--danger);border-radius:8px;background:none;color:var(--danger);font-weight:700;cursor:pointer;margin-top:8px;}
+  .logout-btn:hover{background:rgba(224,122,95,.08);}
+ 
+  #toastWrap{position:fixed;top:14px;left:0;right:0;display:flex;flex-direction:column;align-items:center;gap:8px;z-index:200;pointer-events:none;}
+  .toast{background:var(--well);color:var(--text);padding:11px 18px;border-radius:20px;font-size:13.5px;box-shadow:0 3px 10px rgba(0,0,0,.3);max-width:88%;border:1px solid var(--ink-line-soft);}
+ 
+  ::-webkit-scrollbar{width:6px;}
+  ::-webkit-scrollbar-thumb{background:#B9AC88;border-radius:3px;}
+ 
+  @media (min-width:720px){
+    nav.tabbar{position:static;border-top:none;border-bottom:1px solid var(--ink-line);max-width:640px;margin:0 auto;}
+  }
+</style>
+</head>
+<body>
+ 
+<div id="toastWrap"></div>
+ 
+<!-- ============ شاشة الدخول ============ -->
+<div id="authScreen">
+  <div class="card">
+    <div class="brand-mark">م</div>
+    <div class="brand-row"><span class="brand">مِداد</span></div>
+    <p class="tagline">مساحتك للمراسلة، ببساطة</p>
+ 
+    <div id="authError" class="error-msg hidden"></div>
+ 
+    <!-- 1) شاشة الاختيار الرئيسية -->
+    <div class="pane active" id="pane-choice">
+      <button class="choice-btn primary" id="goQuick">
+        تسجيل دخول سريع
+        <span class="sub">اكتب اسمك فقط ونجهّز لك حسابًا الآن</span>
+      </button>
+      <button class="choice-btn" id="goLogin">تسجيل الدخول</button>
+      <button class="choice-btn" id="goCreate">إنشاء حساب</button>
+    </div>
+ 
+    <!-- 2) تسجيل دخول سريع -->
+    <div class="pane" id="pane-quick">
+      <span class="back-link" data-back>← رجوع</span>
+      <h2 class="pane-title">تسجيل دخول سريع</h2>
+      <p class="pane-desc">اكتب اسمك، وسننشئ لك اسم مستخدم وكلمة مرور تلقائيًا.</p>
+      <div class="field">
+        <label for="quickName">الاسم</label>
+        <input type="text" id="quickName" placeholder="مثال: سارة أحمد" maxlength="40">
+      </div>
+      <div class="captcha-row">
+        <span class="captcha-q" id="quickCaptchaQ"></span>
+        <input type="text" id="quickCaptchaA" placeholder="الناتج" inputmode="numeric">
+        <button type="button" class="captcha-refresh" data-refresh="quick" title="تحديث">⟳</button>
+      </div>
+      <button class="btn" id="quickSignupBtn">إنشاء الحساب والدخول</button>
+    </div>
+ 
+    <!-- 3) تسجيل الدخول (حساب موجود) -->
+    <div class="pane" id="pane-login">
+      <span class="back-link" data-back>← رجوع</span>
+      <h2 class="pane-title">تسجيل الدخول</h2>
+      <p class="pane-desc">أدخل اسم المستخدم وكلمة المرور الخاصين بحسابك.</p>
+      <div class="field">
+        <label for="loginUsername">اسم المستخدم</label>
+        <input type="text" id="loginUsername" placeholder="username" style="direction:ltr;text-align:right;">
+      </div>
+      <div class="field">
+        <label for="loginPassword">كلمة المرور</label>
+        <input type="password" id="loginPassword" style="direction:ltr;text-align:right;">
+      </div>
+      <button class="btn" id="loginBtn">دخول</button>
+    </div>
+ 
+    <!-- 4) إنشاء حساب يدوي -->
+    <div class="pane" id="pane-create">
+      <span class="back-link" data-back>← رجوع</span>
+      <h2 class="pane-title">إنشاء حساب</h2>
+      <p class="pane-desc">اختر اسم المستخدم وكلمة المرور بنفسك.</p>
+      <div class="field">
+        <label for="createName">الاسم</label>
+        <input type="text" id="createName" placeholder="مثال: سارة أحمد" maxlength="40">
+      </div>
+      <div class="field">
+        <label for="createUsername">اسم المستخدم</label>
+        <input type="text" id="createUsername" placeholder="english_letters_numbers" style="direction:ltr;text-align:right;" maxlength="20">
+        <div class="hint" id="createUsernameHint">3 إلى 20 حرفًا: حروف إنجليزية صغيرة، أرقام، أو "_"</div>
+      </div>
+      <div class="field">
+        <label for="createPassword">كلمة المرور</label>
+        <input type="password" id="createPassword" style="direction:ltr;text-align:right;" placeholder="8 أحرف على الأقل">
+      </div>
+      <div class="captcha-row">
+        <span class="captcha-q" id="createCaptchaQ"></span>
+        <input type="text" id="createCaptchaA" placeholder="الناتج" inputmode="numeric">
+        <button type="button" class="captcha-refresh" data-refresh="create" title="تحديث">⟳</button>
+      </div>
+      <button class="btn" id="createBtn">إنشاء الحساب</button>
+    </div>
+ 
+    <!-- 5) عرض بيانات الحساب الجديد مرة واحدة (بعد تسجيل الدخول السريع) -->
+    <div class="pane" id="pane-creds">
+      <p class="pane-desc" style="margin-bottom:16px;">تم إنشاء حسابك. احفظ هذه البيانات الآن — لن تظهر مرة أخرى:</p>
+      <div class="cred-box">
+        <div class="cred-row"><span class="cred-label">الاسم</span><span class="cred-value" id="credName"></span></div>
+        <div class="cred-row"><span class="cred-label">Username</span><span style="display:flex;align-items:center;"><span class="cred-value" id="credUsername"></span><button class="copy-btn" data-copy="credUsername">نسخ</button></span></div>
+        <div class="cred-row"><span class="cred-label">Password</span><span style="display:flex;align-items:center;"><span class="cred-value" id="credPassword"></span><button class="copy-btn" data-copy="credPassword">نسخ</button></span></div>
+      </div>
+      <p class="warn-note">⚠️ احفظ اسم المستخدم وكلمة المرور في مكان آمن. ستحتاجهما لتسجيل الدخول لاحقًا.</p>
+      <button class="btn" id="continueBtn">متابعة إلى مِداد</button>
+    </div>
+  </div>
+</div>
+ 
+<!-- ============ التطبيق ============ -->
+<div id="app" class="hidden">
+  <header class="topbar"><span class="brand">مِداد</span></header>
+ 
+  <nav class="tabbar">
+    <button class="tab-btn active" data-tab="home"><span class="tab-icon">⌂</span>الرئيسية</button>
+    <button class="tab-btn" data-tab="messages"><span class="tab-icon">✉</span>المراسلات</button>
+    <button class="tab-btn" data-tab="account"><span class="tab-icon">◔</span>الحساب</button>
+  </nav>
+ 
+  <main class="content">
+    <section id="tab-home">
+      <h2 class="section-title">مرحبًا</h2>
+      <div class="welcome-card">
+        <h3 id="welcomeName" style="margin:0;font-size:22px;"></h3>
+        <p>سعداء بعودتك إلى مِداد. توجّه إلى «المراسلات» لبدء محادثة جديدة.</p>
+      </div>
+    </section>
+ 
+    <section id="tab-messages" class="hidden">
+      <h2 class="section-title">المراسلات</h2>
+      <div class="search-row">
+        <input type="text" id="searchInput" placeholder="ابحث باسم المستخدم...">
+        <button id="searchBtn">بحث</button>
+      </div>
+      <div id="searchResults"></div>
+      <div class="section-label">المحادثات</div>
+      <div id="convList"><p class="empty-hint">لا توجد محادثات بعد.</p></div>
+    </section>
+ 
+    <section id="tab-account" class="hidden">
+      <h2 class="section-title">الحساب</h2>
+      <div class="acc-row">
+        <div class="lbl">الاسم</div>
+        <div class="val" id="accName"></div>
+        <div class="acc-edit-row hidden" id="editNameRow">
+          <input type="text" id="editNameInput" maxlength="40">
+          <button id="saveNameBtn">حفظ</button>
+        </div>
+        <button class="copy-btn" style="margin-top:10px;" id="toggleEditNameBtn">تعديل الاسم</button>
+      </div>
+      <div class="acc-row">
+        <div class="lbl">Username</div>
+        <div class="val uname" id="accUsername"></div>
+      </div>
+      <button class="logout-btn" id="logoutBtn">تسجيل الخروج</button>
+    </section>
+  </main>
+</div>
+ 
+<!-- ============ عرض المحادثة ============ -->
+<div id="chatView" class="hidden">
+  <div class="chat-header">
+    <button id="chatBackBtn">→</button>
+    <span class="who-name" id="chatWithName"></span>
+  </div>
+  <div class="chat-messages" id="chatMessages"></div>
+  <div class="chat-input">
+    <button class="icon-btn" id="imgBtn" title="إرسال صورة">🖼</button>
+    <input type="file" id="imgInput" accept="image/*" class="hidden">
+    <button class="icon-btn" id="micBtn" title="تسجيل صوتي">🎙</button>
+    <input type="text" id="msgInput" placeholder="اكتب رسالة...">
+    <button class="send-btn" id="sendBtn">➤</button>
+  </div>
+</div>
+ 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script>
+/* ============ إعداد Supabase ============ */
+const SUPABASE_URL = "https://zifyzqcaukstsbduobsl.supabase.co";
+const SUPABASE_KEY = "sb_publishable_BHdVgVMqmOivhozAkOUXgA_oLCaUs6M";
+let sb = null;
+try{
+  if(!window.supabase){ throw new Error('لم يتم تحميل مكتبة Supabase'); }
+  sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY);
+}catch(e){
+  document.addEventListener('DOMContentLoaded', ()=>{
+    showError('تعذّر تحميل مكتبة Supabase. تأكد من اتصالك بالإنترنت ثم أعد تحميل الصفحة.');
+  });
+}
+const EMAIL_DOMAIN = "midad.local";
+ 
+/* ============ حالة عامة ============ */
+let me = null;
+let myConversationIds = new Set();
+let activeConversationId = null;
+let activeChannel = null;
+let mediaRecorder = null, recordedChunks = [], recording = false;
+let captchas = {}; // {quick:{a,b}, create:{a,b}}
+ 
+/* ============ أدوات مساعدة ============ */
+function toast(msg){
+  const wrap = document.getElementById('toastWrap');
+  const el = document.createElement('div');
+  el.className = 'toast';
+  el.textContent = msg;
+  wrap.appendChild(el);
+  setTimeout(()=>{ el.style.opacity='0'; el.style.transition='opacity .3s'; setTimeout(()=>el.remove(),300); }, 3200);
+}
+function friendlyError(err){
+  const msg = (err && err.message) ? err.message : String(err||'');
+  if(/NetworkError|Failed to fetch|fetch resource/i.test(msg)){
+    return 'تعذّر الاتصال بالخادم. تحقّق من اتصالك بالإنترنت، ومن كون الرابط https://zifyzqcaukstsbduobsl.supabase.co صحيحًا ونشطًا، وتجنّب فتح الملف مباشرة عبر file:// — افتحه من خادم محلي أو استضافة بروتوكول https.';
+  }
+  if(/registered|exists/i.test(msg)) return 'اسم المستخدم هذا مُستخدم بالفعل، جرّب اسمًا آخر.';
+  if(/Invalid login credentials/i.test(msg)) return 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+  return msg || 'حدث خطأ غير متوقع';
+}
+function randId(len){
+  const chars = "abcdefghijklmnopqrstuvwxyz0123456789";
+  let s = "";
+  for(let i=0;i<len;i++) s += chars[Math.floor(Math.random()*chars.length)];
+  return s;
+}
+function randomUsername(){ return "user_" + randId(8); }
+function randomPassword(){
+  const upper="ABCDEFGHJKLMNPQRSTUVWXYZ", lower="abcdefghjkmnpqrstuvwxyz", num="23456789", sym="!@#$%*?";
+  const all = upper+lower+num+sym;
+  let pw = upper[Math.floor(Math.random()*upper.length)] + lower[Math.floor(Math.random()*lower.length)]
+          + num[Math.floor(Math.random()*num.length)] + sym[Math.floor(Math.random()*sym.length)];
+  for(let i=0;i<10;i++) pw += all[Math.floor(Math.random()*all.length)];
+  return pw.split('').sort(()=>Math.random()-0.5).join('');
+}
+function showError(msg){
+  const box = document.getElementById('authError');
+  box.textContent = msg;
+  box.classList.remove('hidden');
+}
+function clearError(){ document.getElementById('authError').classList.add('hidden'); }
+function fmtTime(ts){ return new Date(ts).toLocaleTimeString('ar', {hour:'2-digit',minute:'2-digit'}); }
+function escapeHtml(s){
+  return s.replace(/[&<>"']/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+}
+ 
+/* ============ التحقق البشري (كابتشا بسيطة) ============ */
+function newCaptcha(key){
+  const a = Math.floor(Math.random()*8)+2, b = Math.floor(Math.random()*8)+1;
+  captchas[key] = a+b;
+  document.getElementById(key+'CaptchaQ').textContent = `${a} + ${b} = ؟`;
+  document.getElementById(key+'CaptchaA').value = '';
+}
+function checkCaptcha(key){
+  const val = document.getElementById(key+'CaptchaA').value.trim();
+  return val !== '' && Number(val) === captchas[key];
+}
+document.querySelectorAll('[data-refresh]').forEach(b=>{
+  b.addEventListener('click', ()=> newCaptcha(b.getAttribute('data-refresh')));
+});
+ 
+/* ============ التنقل بين الشاشات ============ */
+function showPane(id){
+  clearError();
+  document.querySelectorAll('.pane').forEach(p=>p.classList.remove('active'));
+  document.getElementById(id).classList.add('active');
+}
+document.getElementById('goQuick').addEventListener('click', ()=>{ showPane('pane-quick'); newCaptcha('quick'); });
+document.getElementById('goLogin').addEventListener('click', ()=> showPane('pane-login'));
+document.getElementById('goCreate').addEventListener('click', ()=>{ showPane('pane-create'); newCaptcha('create'); });
+document.querySelectorAll('[data-back]').forEach(b=> b.addEventListener('click', ()=> showPane('pane-choice')));
+ 
+document.getElementById('createUsername').addEventListener('input', e=>{
+  e.target.value = e.target.value.toLowerCase().replace(/[^a-z0-9_]/g,'');
+});
+ 
+/* ============ تسجيل دخول سريع ============ */
+document.getElementById('quickSignupBtn').addEventListener('click', async ()=>{
+  clearError();
+  if(!sb){ showError('لم يتم تحميل الاتصال بالخادم بعد. أعد تحميل الصفحة.'); return; }
+  const name = document.getElementById('quickName').value.trim();
+  if(!name){ showError('يرجى كتابة الاسم'); return; }
+  if(!checkCaptcha('quick')){ showError('التحقق من أنك إنسان غير صحيح، حاول مجددًا'); newCaptcha('quick'); return; }
+ 
+  const btn = document.getElementById('quickSignupBtn');
+  btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
+  try{
+    let username, password, signRes, lastErr;
+    for(let attempt=0; attempt<5; attempt++){
+      username = randomUsername();
+      password = randomPassword();
+      signRes = await sb.auth.signUp({ email: `${username}@${EMAIL_DOMAIN}`, password });
+      if(!signRes.error){ lastErr = null; break; }
+      lastErr = signRes.error;
+      if(!/registered|exists/i.test(signRes.error.message)) break;
+    }
+    if(lastErr) throw lastErr;
+ 
+    const userId = signRes.data.user ? signRes.data.user.id : signRes.data.session.user.id;
+    if(!signRes.data.session){
+      const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
+      if(loginErr) throw new Error('تعذّر إكمال إنشاء الحساب. يرجى التأكد من تعطيل "Confirm email" في إعدادات Supabase Auth.');
+    }
+    const { error: profErr } = await sb.from('profiles').insert({ id: userId, username, display_name: name });
+    if(profErr) throw profErr;
+ 
+    me = { id: userId, username, display_name: name };
+    document.getElementById('credName').textContent = name;
+    document.getElementById('credUsername').textContent = username;
+    document.getElementById('credPassword').textContent = password;
+    showPane('pane-creds');
+  }catch(err){
+    showError(friendlyError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب والدخول';
+  }
+});
+document.getElementById('continueBtn').addEventListener('click', ()=> enterApp());
+ 
+/* ============ إنشاء حساب يدوي ============ */
+document.getElementById('createBtn').addEventListener('click', async ()=>{
+  clearError();
+  if(!sb){ showError('لم يتم تحميل الاتصال بالخادم بعد. أعد تحميل الصفحة.'); return; }
+  const name = document.getElementById('createName').value.trim();
+  const username = document.getElementById('createUsername').value.trim();
+  const password = document.getElementById('createPassword').value;
+  if(!name){ showError('يرجى كتابة الاسم'); return; }
+  if(username.length < 3 || username.length > 20){ showError('اسم المستخدم يجب أن يكون بين 3 و20 حرفًا'); return; }
+  if(password.length < 8){ showError('كلمة المرور يجب أن تكون 8 أحرف على الأقل'); return; }
+  if(!checkCaptcha('create')){ showError('التحقق من أنك إنسان غير صحيح، حاول مجددًا'); newCaptcha('create'); return; }
+ 
+  const btn = document.getElementById('createBtn');
+  btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
+  try{
+    const { data: existing } = await sb.from('profiles').select('id').eq('username', username).limit(1);
+    if(existing && existing.length){ showError('اسم المستخدم هذا مُستخدم بالفعل'); return; }
+ 
+    const { data: signRes, error: signErr } = await sb.auth.signUp({ email: `${username}@${EMAIL_DOMAIN}`, password });
+    if(signErr) throw signErr;
+    const userId = signRes.user ? signRes.user.id : signRes.session.user.id;
+    if(!signRes.session){
+      const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
+      if(loginErr) throw new Error('تعذّر إكمال إنشاء الحساب. يرجى التأكد من تعطيل "Confirm email" في إعدادات Supabase Auth.');
+    }
+    const { error: profErr } = await sb.from('profiles').insert({ id: userId, username, display_name: name });
+    if(profErr) throw profErr;
+ 
+    me = { id: userId, username, display_name: name };
+    toast('تم إنشاء الحساب بنجاح');
+    enterApp();
+  }catch(err){
+    showError(friendlyError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'إنشاء الحساب';
+  }
+});
+ 
+/* ============ نسخ ============ */
+document.querySelectorAll('.copy-btn[data-copy]').forEach(b=>{
+  b.addEventListener('click', ()=>{
+    const target = b.getAttribute('data-copy');
+    const txt = document.getElementById(target).textContent;
+    navigator.clipboard.writeText(txt).then(()=> toast('تم النسخ'));
+  });
+});
+ 
+/* ============ تسجيل الدخول بحساب موجود ============ */
+document.getElementById('loginBtn').addEventListener('click', async ()=>{
+  clearError();
+  if(!sb){ showError('لم يتم تحميل الاتصال بالخادم بعد. أعد تحميل الصفحة.'); return; }
+  const username = document.getElementById('loginUsername').value.trim().toLowerCase();
+  const password = document.getElementById('loginPassword').value;
+  if(!username || !password){ showError('يرجى تعبئة الحقلين'); return; }
+  const btn = document.getElementById('loginBtn');
+  btn.disabled = true; btn.textContent = 'جارٍ الدخول...';
+  try{
+    const { data, error } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
+    if(error) throw error;
+    const { data: prof, error: profErr } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
+    if(profErr || !prof) throw new Error('تعذّر العثور على الملف الشخصي');
+    me = { id: prof.id, username: prof.username, display_name: prof.display_name };
+    enterApp();
+  }catch(err){
+    showError(friendlyError(err));
+  }finally{
+    btn.disabled = false; btn.textContent = 'دخول';
+  }
+});
+ 
+/* ============ استرجاع الجلسة تلقائيًا ============ */
+async function tryRestoreSession(){
+  if(!sb) return;
+  try{
+    const { data } = await sb.auth.getSession();
+    if(data.session){
+      const { data: prof } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single();
+      if(prof){
+        me = { id: prof.id, username: prof.username, display_name: prof.display_name };
+        enterApp();
+      }
+    }
+  }catch(e){ /* تجاهل - ستظهر شاشة الدخول */ }
+}
+ 
+/* ============ دخول التطبيق ============ */
+async function enterApp(){
+  document.getElementById('authScreen').classList.add('hidden');
+  document.getElementById('app').classList.remove('hidden');
+  document.getElementById('welcomeName').textContent = me.display_name;
+  document.getElementById('accName').textContent = me.display_name;
+  document.getElementById('accUsername').textContent = me.username;
+  await loadMyConversationIds();
+  await loadConversationsList();
+  subscribeGlobalMessages();
+  if(window.Notification && Notification.permission === 'default'){ Notification.requestPermission(); }
+}
+ 
+/* ============ تبويبات ============ */
+document.querySelectorAll('.tab-btn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    document.querySelectorAll('.tab-btn').forEach(b=>b.classList.remove('active'));
+    btn.classList.add('active');
+    const tab = btn.getAttribute('data-tab');
+    ['home','messages','account'].forEach(t=> document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab));
+    if(tab==='messages') loadConversationsList();
+  });
+});
+ 
+/* ============ البحث عن مستخدمين ============ */
+document.getElementById('searchBtn').addEventListener('click', searchUsers);
+document.getElementById('searchInput').addEventListener('keydown', e=>{ if(e.key==='Enter') searchUsers(); });
+async function searchUsers(){
+  const q = document.getElementById('searchInput').value.trim();
+  const box = document.getElementById('searchResults');
+  box.innerHTML = '';
+  if(!q) return;
+  const { data, error } = await sb.from('profiles').select('id,username,display_name')
+    .ilike('username', `%${q}%`).neq('id', me.id).limit(10);
+  if(error){ toast('تعذّر البحث'); return; }
+  if(!data.length){ box.innerHTML = '<p class="empty-hint">لا نتائج</p>'; return; }
+  data.forEach(u=>{
+    const el = document.createElement('div');
+    el.className = 'user-item';
+    el.innerHTML = `<div class="who"><span class="name">${escapeHtml(u.display_name)}</span><span class="uname">${escapeHtml(u.username)}</span></div><button class="msg-btn">مراسلة</button>`;
+    el.querySelector('.msg-btn').addEventListener('click', ()=> startConversation(u.id, u.display_name));
+    box.appendChild(el);
+  });
+}
+ 
+/* ============ إنشاء / فتح محادثة ============ */
+async function startConversation(otherId, otherName){
+  try{
+    const { data: mine } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
+    const mineIds = (mine||[]).map(r=>r.conversation_id);
+    let convId = null;
+    if(mineIds.length){
+      const { data: shared } = await sb.from('conversation_members').select('conversation_id')
+        .eq('user_id', otherId).in('conversation_id', mineIds).limit(1);
+      if(shared && shared.length) convId = shared[0].conversation_id;
+    }
+    if(!convId){
+      const { data: conv, error: convErr } = await sb.from('conversations').insert({}).select().single();
+      if(convErr) throw convErr;
+      convId = conv.id;
+      const { error: memErr } = await sb.from('conversation_members').insert([
+        { conversation_id: convId, user_id: me.id },
+        { conversation_id: convId, user_id: otherId }
+      ]);
+      if(memErr) throw memErr;
+      myConversationIds.add(convId);
+    }
+    openChat(convId, otherName);
+    loadConversationsList();
+  }catch(err){ toast('تعذّر بدء المحادثة'); }
+}
+ 
+/* ============ قائمة المحادثات ============ */
+async function loadMyConversationIds(){
+  const { data } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
+  myConversationIds = new Set((data||[]).map(r=>r.conversation_id));
+}
+async function loadConversationsList(){
+  const box = document.getElementById('convList');
+  const { data: mine } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
+  if(!mine || !mine.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد.</p>'; return; }
+  const convIds = mine.map(r=>r.conversation_id);
+  const { data: others } = await sb.from('conversation_members').select('conversation_id,user_id').in('conversation_id', convIds).neq('user_id', me.id);
+  if(!others || !others.length){ box.innerHTML = '<p class="empty-hint">لا توجد محادثات بعد.</p>'; return; }
+  const otherIds = [...new Set(others.map(r=>r.user_id))];
+  const { data: profs } = await sb.from('profiles').select('id,username,display_name').in('id', otherIds);
+  const profMap = {}; (profs||[]).forEach(p=> profMap[p.id]=p);
+  box.innerHTML = '';
+  others.forEach(row=>{
+    const p = profMap[row.user_id];
+    if(!p) return;
+    const el = document.createElement('div');
+    el.className = 'conv-item';
+    el.innerHTML = `<div class="who"><span class="name">${escapeHtml(p.display_name)}</span><span class="uname">${escapeHtml(p.username)}</span></div><span>›</span>`;
+    el.addEventListener('click', ()=> openChat(row.conversation_id, p.display_name));
+    box.appendChild(el);
+  });
+}
+ 
+/* ============ عرض المحادثة ============ */
+async function openChat(convId, otherName){
+  activeConversationId = convId;
+  document.getElementById('chatWithName').textContent = otherName;
+  document.getElementById('chatMessages').innerHTML = '';
+  document.getElementById('chatView').classList.remove('hidden');
+ 
+  const { data: msgs, error } = await sb.from('messages').select('*').eq('conversation_id', convId).order('created_at', {ascending:true});
+  if(!error && msgs){ msgs.forEach(m=> renderMessage(m)); scrollChatBottom(); }
+ 
+  if(activeChannel){ sb.removeChannel(activeChannel); }
+  activeChannel = sb.channel('conv-'+convId)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages', filter:`conversation_id=eq.${convId}`}, payload=>{
+      if(payload.new.sender_id === me.id) return;
+      renderMessage(payload.new);
+      scrollChatBottom();
+    }).subscribe();
+}
+document.getElementById('chatBackBtn').addEventListener('click', ()=>{
+  document.getElementById('chatView').classList.add('hidden');
+  if(activeChannel){ sb.removeChannel(activeChannel); activeChannel = null; }
+  activeConversationId = null;
+});
+function scrollChatBottom(){
+  const box = document.getElementById('chatMessages');
+  box.scrollTop = box.scrollHeight;
+}
+async function renderMessage(m){
+  const box = document.getElementById('chatMessages');
+  const mine = m.sender_id === me.id;
+  const bubble = document.createElement('div');
+  bubble.className = 'bubble ' + (mine ? 'mine' : 'theirs');
+  if(m.type === 'text'){
+    bubble.innerHTML = `<span>${escapeHtml(m.content)}</span><span class="time">${fmtTime(m.created_at)}</span>`;
+    box.appendChild(bubble);
+  } else if(m.type === 'image'){
+    box.appendChild(bubble);
+    const { data } = await sb.storage.from('chat-media').createSignedUrl(m.content, 3600);
+    if(data){ bubble.innerHTML = `<img src="${data.signedUrl}"><span class="time">${fmtTime(m.created_at)}</span>`; }
+  } else if(m.type === 'audio'){
+    box.appendChild(bubble);
+    const { data } = await sb.storage.from('chat-media').createSignedUrl(m.content, 3600);
+    if(data){ bubble.innerHTML = `<audio controls src="${data.signedUrl}"></audio><span class="time">${fmtTime(m.created_at)}</span>`; }
+  }
+}
+ 
+/* ============ إرسال نص ============ */
+document.getElementById('sendBtn').addEventListener('click', sendTextMessage);
+document.getElementById('msgInput').addEventListener('keydown', e=>{ if(e.key==='Enter') sendTextMessage(); });
+async function sendTextMessage(){
+  const input = document.getElementById('msgInput');
+  const text = input.value.trim();
+  if(!text || !activeConversationId) return;
+  input.value = '';
+  const { data, error } = await sb.from('messages').insert({ conversation_id: activeConversationId, sender_id: me.id, type: 'text', content: text }).select().single();
+  if(error){ toast('تعذّر إرسال الرسالة'); return; }
+  renderMessage(data);
+  scrollChatBottom();
+}
+ 
+/* ============ إرسال صورة ============ */
+document.getElementById('imgBtn').addEventListener('click', ()=> document.getElementById('imgInput').click());
+document.getElementById('imgInput').addEventListener('change', async e=>{
+  const file = e.target.files[0];
+  e.target.value = '';
+  if(!file || !activeConversationId) return;
+  try{
+    const path = `${activeConversationId}/${Date.now()}_${file.name.replace(/[^a-zA-Z0-9.]/g,'_')}`;
+    const { error: upErr } = await sb.storage.from('chat-media').upload(path, file);
+    if(upErr) throw upErr;
+    const { data, error } = await sb.from('messages').insert({ conversation_id: activeConversationId, sender_id: me.id, type: 'image', content: path }).select().single();
+    if(error) throw error;
+    renderMessage(data);
+    scrollChatBottom();
+  }catch(err){ toast('تعذّر إرسال الصورة'); }
+});
+ 
+/* ============ تسجيل وإرسال صوت ============ */
+document.getElementById('micBtn').addEventListener('click', async ()=>{
+  if(!activeConversationId) return;
+  const btn = document.getElementById('micBtn');
+  if(!recording){
+    try{
+      const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+      recordedChunks = [];
+      mediaRecorder = new MediaRecorder(stream);
+      mediaRecorder.ondataavailable = e => { if(e.data.size>0) recordedChunks.push(e.data); };
+      mediaRecorder.onstop = async ()=>{
+        stream.getTracks().forEach(t=>t.stop());
+        const blob = new Blob(recordedChunks, {type:'audio/webm'});
+        try{
+          const path = `${activeConversationId}/${Date.now()}_voice.webm`;
+          const { error: upErr } = await sb.storage.from('chat-media').upload(path, blob);
+          if(upErr) throw upErr;
+          const { data, error } = await sb.from('messages').insert({ conversation_id: activeConversationId, sender_id: me.id, type: 'audio', content: path }).select().single();
+          if(error) throw error;
+          renderMessage(data);
+          scrollChatBottom();
+        }catch(err){ toast('تعذّر إرسال الرسالة الصوتية'); }
+      };
+      mediaRecorder.start();
+      recording = true;
+      btn.classList.add('recording');
+      btn.textContent = '⏹';
+    }catch(err){ toast('تعذّر الوصول إلى الميكروفون'); }
+  } else {
+    mediaRecorder.stop();
+    recording = false;
+    btn.classList.remove('recording');
+    btn.textContent = '🎙';
+  }
+});
+ 
+/* ============ إشعارات فورية عامة ============ */
+function subscribeGlobalMessages(){
+  sb.channel('global-messages')
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages'}, async payload=>{
+      const m = payload.new;
+      if(m.sender_id === me.id) return;
+      if(!myConversationIds.has(m.conversation_id)){
+        await loadMyConversationIds();
+        if(!myConversationIds.has(m.conversation_id)) return;
+      }
+      if(m.conversation_id === activeConversationId){
+        renderMessage(m);
+        scrollChatBottom();
+      } else {
+        toast('رسالة جديدة');
+        if(window.Notification && Notification.permission === 'granted' && document.hidden){
+          new Notification('مِداد', { body: 'لديك رسالة جديدة' });
+        }
+        loadConversationsList();
+      }
+    })
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'conversation_members', filter:`user_id=eq.${me.id}`}, ()=>{
+      loadMyConversationIds();
+      loadConversationsList();
+    })
+    .subscribe();
+}
+ 
+/* ============ الحساب ============ */
+document.getElementById('toggleEditNameBtn').addEventListener('click', ()=>{
+  const row = document.getElementById('editNameRow');
+  document.getElementById('editNameInput').value = me.display_name;
+  row.classList.toggle('hidden');
+});
+document.getElementById('saveNameBtn').addEventListener('click', async ()=>{
+  const newName = document.getElementById('editNameInput').value.trim();
+  if(!newName) return;
+  const { error } = await sb.from('profiles').update({ display_name: newName }).eq('id', me.id);
+  if(error){ toast('تعذّر حفظ الاسم'); return; }
+  me.display_name = newName;
+  document.getElementById('accName').textContent = newName;
+  document.getElementById('welcomeName').textContent = newName;
+  document.getElementById('editNameRow').classList.add('hidden');
+  toast('تم حفظ الاسم');
+});
+document.getElementById('logoutBtn').addEventListener('click', async ()=>{
+  await sb.auth.signOut();
+  location.reload();
+});
+ 
+/* ============ بدء التشغيل ============ */
+tryRestoreSession();
+</script>
+</body>
+</html>
+ 
