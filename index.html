@@ -527,26 +527,19 @@ document.getElementById('quickSignupBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('quickSignupBtn');
   btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
   try{
-    let username, password, signRes, lastErr;
-    for(let attempt=0; attempt<5; attempt++){
-      username = randomUsername();
-      password = randomPassword();
-      signRes = await sb.auth.signUp({ email: `${username}@${EMAIL_DOMAIN}`, password });
-      if(!signRes.error){ lastErr = null; break; }
-      lastErr = signRes.error;
-      if(!/registered|exists/i.test(signRes.error.message)) break;
-    }
-    if(lastErr) throw lastErr;
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ mode: 'quick', display_name: name })
+    });
+    const result = await resp.json();
+    if(!resp.ok) throw new Error(result.error || 'تعذّر إنشاء الحساب');
+    const { username, password } = result;
  
-    const userId = signRes.data.user ? signRes.data.user.id : signRes.data.session.user.id;
-    if(!signRes.data.session){
-      const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
-      if(loginErr) throw new Error('تعذّر إكمال إنشاء الحساب. يرجى التأكد من تعطيل "Confirm email" في إعدادات Supabase Auth.');
-    }
-    const { error: profErr } = await sb.from('profiles').insert({ id: userId, username, display_name: name });
-    if(profErr) throw profErr;
+    const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
+    if(loginErr) throw loginErr;
  
-    me = { id: userId, username, display_name: name };
+    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name };
     document.getElementById('credName').textContent = name;
     document.getElementById('credUsername').textContent = username;
     document.getElementById('credPassword').textContent = password;
@@ -574,20 +567,18 @@ document.getElementById('createBtn').addEventListener('click', async ()=>{
   const btn = document.getElementById('createBtn');
   btn.disabled = true; btn.textContent = 'جارٍ الإنشاء...';
   try{
-    const { data: existing } = await sb.from('profiles').select('id').eq('username', username).limit(1);
-    if(existing && existing.length){ showError('اسم المستخدم هذا مُستخدم بالفعل'); return; }
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/create-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${SUPABASE_KEY}` },
+      body: JSON.stringify({ mode: 'manual', username, password, display_name: name })
+    });
+    const result = await resp.json();
+    if(!resp.ok) throw new Error(result.error || 'تعذّر إنشاء الحساب');
  
-    const { data: signRes, error: signErr } = await sb.auth.signUp({ email: `${username}@${EMAIL_DOMAIN}`, password });
-    if(signErr) throw signErr;
-    const userId = signRes.user ? signRes.user.id : signRes.session.user.id;
-    if(!signRes.session){
-      const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
-      if(loginErr) throw new Error('تعذّر إكمال إنشاء الحساب. يرجى التأكد من تعطيل "Confirm email" في إعدادات Supabase Auth.');
-    }
-    const { error: profErr } = await sb.from('profiles').insert({ id: userId, username, display_name: name });
-    if(profErr) throw profErr;
+    const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
+    if(loginErr) throw loginErr;
  
-    me = { id: userId, username, display_name: name };
+    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name };
     toast('تم إنشاء الحساب بنجاح');
     enterApp();
   }catch(err){
