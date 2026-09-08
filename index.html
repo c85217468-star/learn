@@ -428,7 +428,9 @@ try{
     showError('تعذّر تحميل مكتبة Supabase. تأكد من اتصالك بالإنترنت ثم أعد تحميل الصفحة.');
   });
 }
-const EMAIL_DOMAIN = "midad.local";
+/* تم تغيير النطاق من "midad.local" إلى "midad.app": ".local" محجوز (RFC 6762)
+   ويرفضه محقق البريد في Supabase Auth بخطأ email_address_invalid */
+const EMAIL_DOMAIN = "midad.app";
  
 /* ============ حالة عامة ============ */
 let me = null;
@@ -454,6 +456,8 @@ function friendlyError(err){
   }
   if(/registered|exists/i.test(msg)) return 'اسم المستخدم هذا مُستخدم بالفعل، جرّب اسمًا آخر.';
   if(/Invalid login credentials/i.test(msg)) return 'اسم المستخدم أو كلمة المرور غير صحيحة.';
+  if(/Email not confirmed/i.test(msg)) return 'الحساب بحاجة إلى تأكيد بريد إلكتروني، وهذا غير ممكن مع البريد الوهمي المستخدم هنا. يجب تعطيل "Confirm email" من إعدادات Supabase Auth > Providers > Email لهذا المشروع.';
+  if(/invalid/i.test(msg) && /email/i.test(msg)) return 'صيغة البريد الوهمي المُولَّد مرفوضة من الخادم. جرّب تغيير EMAIL_DOMAIN في الكود إلى نطاق آخر.';
   return msg || 'حدث خطأ غير متوقع';
 }
 function randId(len){
