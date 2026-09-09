@@ -604,7 +604,7 @@
  
       <div class="danger-zone">
         <div class="dz-title">منطقة الخطر</div>
-        <div class="dz-sub">هذه الإجراءات نهائية. المشروع دراسي، فيرجى الحذر قبل المتابعة.</div>
+        <div class="dz-sub">حذف الحساب نهائي ولا يمكن التراجع عنه: سيُحذف ملفك الشخصي، محادثاتك، رسائلك، وصورك/مقاطعك الصوتية من الخادم بالكامل.</div>
         <button class="logout-btn" id="deleteAccountBtn" style="margin-top:0;">حذف الحساب نهائيًا</button>
       </div>
  
@@ -1065,14 +1065,19 @@ function subscribeMessageRequests(){
   sb.channel('msg-requests-'+me.id)
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'message_requests', filter:`target_id=eq.${me.id}`}, async payload=>{
       const sender = await getProfileById(payload.new.requester_id);
-      toast('طلب مراسلة جديد من ' + (sender ? sender.display_name : 'شخص ما'));
+      const name = sender ? sender.display_name : 'شخص ما';
+      toast('طلب مراسلة جديد من ' + name);
+      playNotifySound();
+      sendLocalNotification('مِداد', name + ' يريد مراسلتك', 'midad-req-in-' + payload.new.id);
       loadPendingRequests();
     })
     .on('postgres_changes', {event:'UPDATE', schema:'public', table:'message_requests', filter:`requester_id=eq.${me.id}`}, async payload=>{
       const row = payload.new;
       if(row.status === 'accepted'){
         const target = await getProfileById(row.target_id);
-        toast('تمت الموافقة على مراسلتك' + (target ? ' من ' + target.display_name : '') + ' — يمكنك الآن إرسال الرسائل');
+        const name = target ? target.display_name : '';
+        toast('تمت الموافقة على مراسلتك' + (name ? ' من ' + name : '') + ' — يمكنك الآن إرسال الرسائل');
+        sendLocalNotification('مِداد', (name || 'أحدهم') + ' وافق على طلب مراسلتك — يمكنك الآن إرسال الرسائل', 'midad-req-accepted-' + row.id);
         loadConversationsList();
       } else if(row.status === 'declined'){
         toast('تم رفض طلب مراسلتك');
@@ -1158,6 +1163,10 @@ async function openChat(convId, otherName){
     .subscribe();
 }
 document.getElementById('chatBackBtn').addEventListener('click', ()=>{
+  // نُعلم الطرف الآخر بتوقّفنا عن الكتابة قبل مغادرة المحادثة، وإلا قد يبقى مؤشره
+  // عالقًا عنده حتى انتهاء مهلة الأمان (4 ثوانٍ)
+  clearTimeout(stopTypingTimer);
+  sendStopTyping();
   document.getElementById('chatView').classList.add('hidden');
   hideTypingIndicator();
   if(activeChannel){ sb.removeChannel(activeChannel); activeChannel = null; }
@@ -1394,6 +1403,9 @@ async function ensureNotifyPermissionOnLoad(){
       if(result !== 'granted'){ el.checked = false; savePrefs(); }
     }catch(e){ /* تجاهل بصمت */ }
   }
+  if(el.checked && Notification.permission === 'granted'){
+    subscribeToPush().catch(()=>{});
+  }
   updateNotifyStatusUI();
 }
  
@@ -1401,14 +1413,19 @@ async function ensureNotifyPermissionOnLoad(){
    هذه لحظة تفاعل مباشر، لذا يمكننا طلب الإذن الصريح من المتصفح هنا. */
 async function handleNotifyToggle(){
   const el = document.getElementById('prefNotify');
-  if(!el.checked){ savePrefs(); updateNotifyStatusUI(); return; }
+  if(!el.checked){ savePrefs(); updateNotifyStatusUI(); unsubscribeFromPush().catch(()=>{}); return; }
   if(!('Notification' in window)){
     toast('المتصفح المستخدم لا يدعم إشعارات النظام');
+    el.checked = false; savePrefs(); updateNotifyStatusUI(); return;
+  }
+  if(!window.isSecureContext){
+    toast('الإشعارات تتطلب اتصال HTTPS آمن (أو تشغيل الصفحة محليًا عبر localhost)، فتعذّر تفعيلها هنا');
     el.checked = false; savePrefs(); updateNotifyStatusUI(); return;
   }
   if(Notification.permission === 'granted'){
     toast('تم تفعيل إشعارات الرسائل');
     savePrefs(); updateNotifyStatusUI();
+    await subscribeToPush().catch(()=>{ toast('تم تفعيل الإشعارات المحلية، لكن تعذّر تفعيل إشعارات الدفع (Push) — تحقق من وجود ملف sw.js بجانب الصفحة'); });
     return;
   }
   if(Notification.permission === 'denied'){
@@ -1422,6 +1439,7 @@ async function handleNotifyToggle(){
     const result = await Notification.requestPermission();
     if(result === 'granted'){
       toast('تم منح الإذن — إشعارات الرسائل مفعّلة الآن');
+      await subscribeToPush().catch(()=>{ toast('تعذّر تفعيل إشعارات الدفع (Push)'); });
     } else {
       toast('لن تصلك إشعارات لأنه لم يُمنح الإذن الصريح');
       el.checked = false;
@@ -1434,21 +1452,122 @@ async function handleNotifyToggle(){
   updateNotifyStatusUI();
 }
  
+/* ============ إشعارات الدفع (Web Push) — تصل حتى لو كان المتصفح مغلقًا تمامًا ============
+   يتطلب: ملف sw.js بجانب هذه الصفحة على نفس النطاق، واتصال HTTPS (أو localhost). */
+const VAPID_PUBLIC_KEY = "BAmJb1QN-SaNcYSXLIy7XmASkn6EfbzTIV3zQ0fhwf_FDYW7etAgRzbPNs5htnJokZotgCbr48wl8dSebAaFuQ0";
+function urlBase64ToUint8Array(base64String){
+  const padding = '='.repeat((4 - base64String.length % 4) % 4);
+  const base64 = (base64String + padding).replace(/-/g, '+').replace(/_/g, '/');
+  const rawData = window.atob(base64);
+  const outputArray = new Uint8Array(rawData.length);
+  for(let i=0;i<rawData.length;i++) outputArray[i] = rawData.charCodeAt(i);
+  return outputArray;
+}
+async function subscribeToPush(){
+  if(!('serviceWorker' in navigator) || !('PushManager' in window)) throw new Error('push not supported');
+  const reg = await navigator.serviceWorker.register('./sw.js');
+  await navigator.serviceWorker.ready;
+  let sub = await reg.pushManager.getSubscription();
+  if(!sub){
+    sub = await reg.pushManager.subscribe({
+      userVisibleOnly: true,
+      applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY)
+    });
+  }
+  const json = sub.toJSON();
+  const { error } = await sb.from('push_subscriptions').upsert({
+    user_id: me.id,
+    endpoint: json.endpoint,
+    p256dh: json.keys.p256dh,
+    auth_key: json.keys.auth
+  }, { onConflict: 'endpoint' });
+  if(error) throw error;
+}
+async function unsubscribeFromPush(){
+  if(!('serviceWorker' in navigator)) return;
+  const reg = await navigator.serviceWorker.getRegistration('./sw.js');
+  if(!reg) return;
+  const sub = await reg.pushManager.getSubscription();
+  if(sub){
+    await sb.from('push_subscriptions').delete().eq('endpoint', sub.endpoint);
+    await sub.unsubscribe();
+  }
+}
+ 
+/* نقطة مركزية واحدة لإرسال أي إشعار نظام: تحترم مفتاح "إشعارات الرسائل"
+   وحالة إذن المتصفح دائمًا، سواء كان الإشعار عن رسالة جديدة أو طلب مراسلة. */
+/* ============ صوت الإشعار ============ */
+/* نولّد نغمة قصيرة برمجيًا عبر Web Audio API بدل الاعتماد على ملف صوتي خارجي —
+   هذا يعمل حتى بدون اتصال إنترنت ولا يحتاج أي أصول إضافية. */
+let notifyAudioCtx = null;
+function soundPrefOn(){
+  const el = document.getElementById('prefSound');
+  return el ? el.checked : false;
+}
+function playNotifySound(){
+  if(!soundPrefOn()) return;
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    if(!notifyAudioCtx) notifyAudioCtx = new Ctx();
+    if(notifyAudioCtx.state === 'suspended'){ notifyAudioCtx.resume(); }
+    const ctx = notifyAudioCtx;
+    const now = ctx.currentTime;
+    // نغمتان قصيرتان صاعدتان (أشبه بـ"دينغ" لطيف) بدل صفارة واحدة جافة
+    [[880, now, 0.12], [1320, now + 0.09, 0.16]].forEach(([freq, start, dur])=>{
+      const osc = ctx.createOscillator();
+      const gain = ctx.createGain();
+      osc.type = 'sine';
+      osc.frequency.value = freq;
+      gain.gain.setValueAtTime(0.0001, start);
+      gain.gain.exponentialRampToValueAtTime(0.16, start + 0.015);
+      gain.gain.exponentialRampToValueAtTime(0.0001, start + dur);
+      osc.connect(gain).connect(ctx.destination);
+      osc.start(start);
+      osc.stop(start + dur + 0.02);
+    });
+  }catch(e){ /* تجاهل بصمت — بعض المتصفحات تمنع الصوت قبل أول تفاعل من المستخدم */ }
+}
+/* متصفحات كثيرة تمنع تشغيل أي صوت قبل أول تفاعل فعلي من المستخدم مع الصفحة (سياسة autoplay).
+   لذا "نُحرّر" سياق الصوت عند أول نقرة أو ضغطة زر حتى يكون جاهزًا لاحقًا عند وصول رسالة فعليًا. */
+function unlockNotifyAudioOnce(){
+  document.removeEventListener('click', unlockNotifyAudioOnce);
+  document.removeEventListener('keydown', unlockNotifyAudioOnce);
+  try{
+    const Ctx = window.AudioContext || window.webkitAudioContext;
+    if(!Ctx) return;
+    if(!notifyAudioCtx) notifyAudioCtx = new Ctx();
+    if(notifyAudioCtx.state === 'suspended'){ notifyAudioCtx.resume(); }
+  }catch(e){ /* تجاهل بصمت */ }
+}
+document.addEventListener('click', unlockNotifyAudioOnce, { once:true });
+document.addEventListener('keydown', unlockNotifyAudioOnce, { once:true });
+ 
+function sendLocalNotification(title, body, tag){
+  if(!notifyPrefOn()) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  try{
+    const n = new Notification(title, { body, tag });
+    n.onclick = ()=>{ window.focus(); n.close(); };
+  }catch(e){ /* بعض المتصفحات قد ترفض الإنشاء المباشر، نتجاهل بصمت */ }
+}
+ 
 /* يرسل إشعار نظام فعليًا عند وصول رسالة، بشرط أن يكون المفتاح مفعّلًا
    والإذن ممنوحًا فعليًا من المتصفح — بغض النظر عمّن أرسل الرسالة. */
 async function maybeSendNotification(m){
-  if(!notifyPrefOn()) return;
-  if(!('Notification' in window) || Notification.permission !== 'granted') return;
   // نتجنّب إظهار إشعار نظام مكرر إن كان المستخدم ينظر فعليًا لنفس المحادثة والصفحة ظاهرة أمامه
   if(m.conversation_id === activeConversationId && !document.hidden) return;
   const sender = await getProfileById(m.sender_id);
   const senderName = sender ? sender.display_name : 'شخص ما';
   const body = m.type === 'text' ? m.content : (m.type === 'image' ? '📷 صورة' : '🎙 رسالة صوتية');
-  try{
-    const n = new Notification('مِداد — ' + senderName, { body, tag: 'midad-conv-' + m.conversation_id });
-    n.onclick = ()=>{ window.focus(); n.close(); };
-  }catch(e){ /* بعض المتصفحات قد ترفض الإنشاء المباشر، نتجاهل بصمت */ }
+  sendLocalNotification('مِداد — ' + senderName, body, 'midad-conv-' + m.conversation_id);
 }
+ 
+/* حالة إذن الإشعارات قد تتغيّر من إعدادات المتصفح نفسها بينما الصفحة مفتوحة
+   (مثلًا المستخدم يفتح إعدادات الموقع في تبويب آخر ويمنح الإذن). نُحدّث واجهة
+   المفتاح عند عودة التركيز للصفحة حتى تعكس الحالة الفعلية دون الحاجة لإعادة تحميل. */
+document.addEventListener('visibilitychange', ()=>{ if(!document.hidden) updateNotifyStatusUI(); });
+window.addEventListener('focus', ()=> updateNotifyStatusUI());
  
 function subscribeGlobalMessages(){
   sb.channel('global-messages')
@@ -1464,6 +1583,9 @@ function subscribeGlobalMessages(){
          عرضها في القناتين معًا هو سبب ظهور كل رسالة واردة مرتين. */
       if(m.conversation_id !== activeConversationId){
         toast('رسالة جديدة');
+      }
+      if(!(m.conversation_id === activeConversationId && !document.hidden)){
+        playNotifySound();
       }
       maybeSendNotification(m);
       loadConversationsList();
@@ -1562,6 +1684,19 @@ PREF_KEYS.forEach(k=>{
     el.addEventListener('change', ()=>{ savePrefs(); if(k==='prefTheme' || k==='prefFontSize') applyThemePref(); toast('تم حفظ الإعداد'); });
   });
 });
+/* إن أوقف المستخدم مؤشر "يكتب الآن" أثناء محادثة مفتوحة وهو يكتب فعليًا،
+   نُرسل "توقّف" فورًا حتى لا يبقى مؤشره عالقًا عند الطرف الآخر */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const el = document.getElementById('prefTyping');
+  if(!el) return;
+  el.addEventListener('change', ()=>{
+    if(!el.checked && activeChannel && activeConversationId){
+      activeChannel.send({ type:'broadcast', event:'typing', payload:{ sender: me.id, stopped: true } });
+      clearTimeout(stopTypingTimer);
+      lastTypingBroadcast = 0;
+    }
+  });
+});
  
 /* ============ الحساب: السماح بالمراسلة (مُخزَّن في قاعدة البيانات، يراه الآخرون) ============ */
 document.addEventListener('DOMContentLoaded', ()=>{
@@ -1580,13 +1715,29 @@ document.addEventListener('DOMContentLoaded', ()=>{
   });
 });
  
-/* ============ حذف الحساب (تجريبي/دراسي) ============ */
+/* ============ حذف الحساب نهائيًا ============ */
 document.getElementById('deleteAccountBtn').addEventListener('click', async ()=>{
-  if(!confirm('سيتم حذف بياناتك الشخصية من هذا الجهاز وتسجيل خروجك. هذا إجراء تجريبي ضمن نطاق المشروع الدراسي. هل تريد المتابعة؟')) return;
-  try{ localStorage.removeItem('midad_prefs_'+me.id); }catch(e){}
-  await sb.auth.signOut();
-  toast('تم تسجيل الخروج');
-  location.reload();
+  if(!confirm('سيُحذف حسابك نهائيًا من الخادم — بما في ذلك ملفك الشخصي، محادثاتك، رسائلك، وصورك/مقاطعك الصوتية. لا يمكن التراجع عن هذا الإجراء. هل تريد المتابعة؟')) return;
+  const btn = document.getElementById('deleteAccountBtn');
+  btn.disabled = true; btn.textContent = 'جارٍ الحذف...';
+  try{
+    const { data: sessionData } = await sb.auth.getSession();
+    const token = sessionData && sessionData.session ? sessionData.session.access_token : null;
+    if(!token) throw new Error('الجلسة غير صالحة، سجّل الدخول من جديد ثم أعد المحاولة');
+    const resp = await fetch(`${SUPABASE_URL}/functions/v1/delete-account`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json', 'apikey': SUPABASE_KEY, 'Authorization': `Bearer ${token}` }
+    });
+    const result = await resp.json().catch(()=>({}));
+    if(!resp.ok) throw new Error(result.error || 'تعذّر حذف الحساب');
+    try{ localStorage.removeItem('midad_prefs_'+me.id); }catch(e){}
+    await sb.auth.signOut();
+    toast('تم حذف الحساب نهائيًا');
+    setTimeout(()=> location.reload(), 900);
+  }catch(err){
+    toast('تعذّر حذف الحساب: ' + (err.message || ''));
+    btn.disabled = false; btn.textContent = 'حذف الحساب نهائيًا';
+  }
 });
  
 document.getElementById('logoutBtn').addEventListener('click', async ()=>{
