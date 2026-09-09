@@ -1397,14 +1397,16 @@ function updateNotifyStatusUI(){
 async function ensureNotifyPermissionOnLoad(){
   const el = document.getElementById('prefNotify');
   if(!el || !('Notification' in window)){ updateNotifyStatusUI(); return; }
-  if(el.checked && Notification.permission === 'default'){
-    try{
-      const result = await Notification.requestPermission();
-      if(result !== 'granted'){ el.checked = false; savePrefs(); }
-    }catch(e){ /* تجاهل بصمت */ }
-  }
+  /* مهم: لا نستدعي Notification.requestPermission() هنا إطلاقًا. طلب الإذن يجب أن
+     يحدث فقط داخل ضغطة مستخدم فعلية (انظر handleNotifyToggle)، وإلا فإن أغلب
+     المتصفحات الحديثة (خصوصًا Chrome) ترفض الطلب تلقائيًا وبصمت وتجعل حالة
+     الإذن "denied" بشكل دائم دون عرض أي نافذة أصلًا — وهذا كان سبب ظهور
+     المفتاح "مقفلاً" رغم أن المستخدم لم يُرفض شيئًا بنفسه. */
   if(el.checked && Notification.permission === 'granted'){
     subscribeToPush().catch(()=>{});
+  } else if(Notification.permission !== 'granted'){
+    // لم يُمنح الإذن بعد (أو رُفض) — لا نفعّل المفتاح تلقائيًا، ينتظر ضغطة المستخدم
+    el.checked = false;
   }
   updateNotifyStatusUI();
 }
