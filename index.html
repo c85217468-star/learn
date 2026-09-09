@@ -19,6 +19,7 @@
     --text-dim:#9DA8A6;
     --danger:#E07A5F;
     --ok:#7FB88B;
+    --chat-font-size:14.5px;
   }
   *{box-sizing:border-box;}
   html,body{margin:0;padding:0;height:100%;}
@@ -275,7 +276,7 @@
       radial-gradient(circle at 85% 75%, rgba(44,58,61,.04), transparent 45%),
       var(--parchment);
   }
-  .bubble{max-width:75%;padding:9px 13px;border-radius:14px;font-size:14.5px;line-height:1.6;box-shadow:0 1px 2px rgba(0,0,0,.06);}
+  .bubble{max-width:75%;padding:9px 13px;border-radius:14px;font-size:var(--chat-font-size,14.5px);line-height:1.6;box-shadow:0 1px 2px rgba(0,0,0,.06);}
   .bubble.mine{align-self:flex-end;background:linear-gradient(135deg, var(--amber), var(--amber-dark));color:#20180C;border-bottom-left-radius:4px;}
   .bubble.theirs{align-self:flex-start;background:#fff;border:1px solid #E2D8C0;border-bottom-right-radius:4px;color:#231F16;}
   .bubble img{max-width:220px;border-radius:8px;display:block;cursor:zoom-in;transition:opacity .15s;}
@@ -297,7 +298,7 @@
     30%{transform:translateY(-4px);opacity:1;}
   }
   .chat-input{background:#fff;border-top:1px solid #E2D8C0;padding:10px;display:flex;align-items:center;gap:8px;padding-bottom:calc(10px + env(safe-area-inset-bottom));}
-  .chat-input input[type=text]{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:20px;background:var(--parchment);}
+  .chat-input input[type=text]{flex:1;padding:11px 14px;border:1px solid #E2D8C0;border-radius:20px;background:var(--parchment);font-size:var(--chat-font-size,14.5px);}
   .icon-btn{background:none;border:none;font-size:19px;cursor:pointer;color:#6B6250;width:38px;height:38px;border-radius:50%;flex-shrink:0;}
   .icon-btn:hover{background:#EFE6D0;}
   .icon-btn.recording{color:var(--danger);animation:pulse 1s infinite;}
@@ -358,6 +359,20 @@
   .switch .slider::before{content:"";position:absolute;width:18px;height:18px;left:3px;top:3px;background:#fff;border-radius:50%;transition:.2s;box-shadow:0 1px 3px rgba(0,0,0,.2);}
   .switch input:checked + .slider{background:var(--amber);}
   .switch input:checked + .slider::before{transform:translateX(-18px);}
+  .switch input:disabled + .slider{opacity:.45;cursor:not-allowed;}
+  .toggle-row .t-sub.warn{color:var(--danger);}
+  .toggle-row .t-sub.ok{color:var(--ok);}
+ 
+  /* ===== طلبات المراسلة ===== */
+  .request-card{
+    display:flex;align-items:center;gap:12px;background:#fff;border:1px solid var(--amber);
+    border-radius:12px;padding:11px 14px;margin-bottom:8px;
+  }
+  .request-actions{display:flex;gap:6px;flex-shrink:0;}
+  .req-accept,.req-decline{border:none;border-radius:18px;padding:7px 13px;font-size:12px;font-weight:700;cursor:pointer;}
+  .req-accept{background:var(--ok);color:#0F2E17;}
+  .req-decline{background:#EFE6D0;color:#6B6250;}
+  .req-note{font-size:11.5px;color:#8A8168;margin-top:2px;}
   .select-row{padding:13px 4px;border-bottom:1px solid #EFE6D0;}
   .select-row:last-child{border-bottom:none;}
   .select-row select{width:100%;margin-top:8px;padding:9px 10px;border:1px solid #E2D8C0;border-radius:6px;background:#fff;font-family:inherit;font-size:13.5px;}
@@ -493,6 +508,10 @@
         <span class="search-spinner" id="searchSpinner"></span>
       </div>
       <div id="searchResults"></div>
+ 
+      <div class="section-label hidden" id="requestsLabel">طلبات المراسلة الواردة</div>
+      <div id="requestsList"></div>
+ 
       <div class="section-label">المحادثات</div>
       <div id="convList"><p class="empty-hint">لا توجد محادثات بعد.</p></div>
     </section>
@@ -536,9 +555,9 @@
         <div class="toggle-row">
           <div>
             <div class="t-lbl">إشعارات الرسائل</div>
-            <div class="t-sub">تنبيه فوري عند وصول رسالة جديدة</div>
+            <div class="t-sub" id="notifyStatusSub">تنبيه فوري عند وصول رسالة جديدة</div>
           </div>
-          <label class="switch"><input type="checkbox" id="prefNotify" checked><span class="slider"></span></label>
+          <label class="switch"><input type="checkbox" id="prefNotify"><span class="slider"></span></label>
         </div>
         <div class="toggle-row">
           <div>
@@ -550,14 +569,14 @@
         <div class="toggle-row">
           <div>
             <div class="t-lbl">إظهار مؤشر "يكتب الآن"</div>
-            <div class="t-sub">يسمح للطرف الآخر برؤية أنك تكتب</div>
+            <div class="t-sub">يسمح للطرف الآخر برؤية أنك تكتب فورًا، ويختفي المؤشر فورًا عند إرسال رسالتك أو توقفك</div>
           </div>
           <label class="switch"><input type="checkbox" id="prefTyping" checked><span class="slider"></span></label>
         </div>
         <div class="toggle-row">
           <div>
             <div class="t-lbl">السماح لأي شخص بمراسلتي</div>
-            <div class="t-sub">عند إيقافه، يمكن فقط لمن تعرفهم مراسلتك</div>
+            <div class="t-sub">عند إيقافه، يُرسل لك من يريد مراسلتك طلبًا أولًا، ولا يقدر على الكتابة إلا بعد موافقتك</div>
           </div>
           <label class="switch"><input type="checkbox" id="prefOpenDm" checked><span class="slider"></span></label>
         </div>
@@ -735,7 +754,7 @@ document.getElementById('quickSignupBtn').addEventListener('click', async ()=>{
     const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
     if(loginErr) throw loginErr;
  
-    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name, bio: '' };
+    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name, bio: '', allow_open_dm: true };
     document.getElementById('credName').textContent = name;
     document.getElementById('credUsername').textContent = username;
     document.getElementById('credPassword').textContent = password;
@@ -773,7 +792,7 @@ document.getElementById('createBtn').addEventListener('click', async ()=>{
     const { error: loginErr } = await sb.auth.signInWithPassword({ email: `${username}@${EMAIL_DOMAIN}`, password });
     if(loginErr) throw loginErr;
  
-    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name, bio: '' };
+    me = { id: (await sb.auth.getUser()).data.user.id, username, display_name: name, bio: '', allow_open_dm: true };
     toast('تم إنشاء الحساب بنجاح');
     enterApp();
   }catch(err){
@@ -806,7 +825,7 @@ document.getElementById('loginBtn').addEventListener('click', async ()=>{
     if(error) throw error;
     const { data: prof, error: profErr } = await sb.from('profiles').select('*').eq('id', data.user.id).single();
     if(profErr || !prof) throw new Error('تعذّر العثور على الملف الشخصي');
-    me = { id: prof.id, username: prof.username, display_name: prof.display_name, bio: prof.bio || '' };
+    me = { id: prof.id, username: prof.username, display_name: prof.display_name, bio: prof.bio || '', allow_open_dm: prof.allow_open_dm !== false };
     enterApp();
   }catch(err){
     showError(friendlyError(err));
@@ -823,7 +842,7 @@ async function tryRestoreSession(){
     if(data.session){
       const { data: prof } = await sb.from('profiles').select('*').eq('id', data.session.user.id).single();
       if(prof){
-        me = { id: prof.id, username: prof.username, display_name: prof.display_name, bio: prof.bio || '' };
+        me = { id: prof.id, username: prof.username, display_name: prof.display_name, bio: prof.bio || '', allow_open_dm: prof.allow_open_dm !== false };
         enterApp();
       }
     }
@@ -837,10 +856,13 @@ async function enterApp(){
   document.getElementById('welcomeName').textContent = me.display_name;
   refreshAccountUI();
   loadPrefs();
+  document.getElementById('prefOpenDm').checked = me.allow_open_dm !== false;
   await loadMyConversationIds();
   await loadConversationsList();
+  await loadPendingRequests();
   subscribeGlobalMessages();
-  if(window.Notification && Notification.permission === 'default'){ Notification.requestPermission(); }
+  subscribeMessageRequests();
+  await ensureNotifyPermissionOnLoad();
 }
 function refreshAccountUI(){
   document.getElementById('accName').textContent = me.display_name;
@@ -859,7 +881,7 @@ document.querySelectorAll('.tab-btn').forEach(btn=>{
     btn.classList.add('active');
     const tab = btn.getAttribute('data-tab');
     ['home','messages','account'].forEach(t=> document.getElementById('tab-'+t).classList.toggle('hidden', t!==tab));
-    if(tab==='messages') loadConversationsList();
+    if(tab==='messages'){ loadConversationsList(); loadPendingRequests(); }
   });
 });
  
@@ -922,33 +944,141 @@ async function searchUsers(q){
 }
  
 /* ============ إنشاء / فتح محادثة ============ */
+async function findExistingConversationWith(otherId){
+  const { data: mine } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
+  const mineIds = (mine||[]).map(r=>r.conversation_id);
+  if(!mineIds.length) return null;
+  const { data: shared } = await sb.from('conversation_members').select('conversation_id')
+    .eq('user_id', otherId).in('conversation_id', mineIds).limit(1);
+  return (shared && shared.length) ? shared[0].conversation_id : null;
+}
+/* ينشئ محادثة فعلية بين الطرفين بلا أي تنقّل في الواجهة — تُستخدم عند قبول طلب مراسلة وارد */
+async function createConversationRow(otherId){
+  const { data: conv, error: convErr } = await sb.from('conversations').insert({}).select().single();
+  if(convErr) throw convErr;
+  const convId = conv.id;
+  /* يجب إدخال عضويتي أولًا في طلب منفصل حتى تصبح مرئية لسياسة RLS
+     الخاصة بإدخال عضوية الطرف الآخر (فحصها يعتمد على وجود صفي كعضو). */
+  const { error: memErrMe } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: me.id });
+  if(memErrMe) throw memErrMe;
+  const { error: memErrOther } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: otherId });
+  if(memErrOther) throw memErrOther;
+  myConversationIds.add(convId);
+  return convId;
+}
 async function startConversation(otherId, otherName){
   try{
-    const { data: mine } = await sb.from('conversation_members').select('conversation_id').eq('user_id', me.id);
-    const mineIds = (mine||[]).map(r=>r.conversation_id);
-    let convId = null;
-    if(mineIds.length){
-      const { data: shared } = await sb.from('conversation_members').select('conversation_id')
-        .eq('user_id', otherId).in('conversation_id', mineIds).limit(1);
-      if(shared && shared.length) convId = shared[0].conversation_id;
+    let convId = await findExistingConversationWith(otherId);
+    if(convId){
+      document.getElementById('searchInput').value = '';
+      document.getElementById('searchResults').innerHTML = '';
+      openChat(convId, otherName);
+      loadConversationsList();
+      return;
     }
-    if(!convId){
-      const { data: conv, error: convErr } = await sb.from('conversations').insert({}).select().single();
-      if(convErr) throw convErr;
-      convId = conv.id;
-      /* يجب إدخال عضويتي أولًا في طلب منفصل حتى تصبح مرئية لسياسة RLS
-         الخاصة بإدخال عضوية الطرف الآخر (فحصها يعتمد على وجود صفي كعضو). */
-      const { error: memErrMe } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: me.id });
-      if(memErrMe) throw memErrMe;
-      const { error: memErrOther } = await sb.from('conversation_members').insert({ conversation_id: convId, user_id: otherId });
-      if(memErrOther) throw memErrOther;
-      myConversationIds.add(convId);
+ 
+    // لا توجد محادثة سابقة بيننا: تحقّق من إعداد الطرف الآخر
+    const { data: targetProf } = await sb.from('profiles').select('allow_open_dm').eq('id', otherId).single();
+    const allowOpen = !targetProf || targetProf.allow_open_dm !== false; // القيمة الافتراضية true إذا لم يوجد العمود بعد
+ 
+    if(allowOpen){
+      convId = await createConversationRow(otherId);
+      document.getElementById('searchInput').value = '';
+      document.getElementById('searchResults').innerHTML = '';
+      openChat(convId, otherName);
+      loadConversationsList();
+      return;
     }
+ 
+    await sendMessageRequest(otherId, otherName);
+  }catch(err){ toast('تعذّر بدء المحادثة: ' + (err.message || '')); }
+}
+ 
+/* ============ طلبات المراسلة ============ */
+async function sendMessageRequest(otherId, otherName){
+  const { data: existing } = await sb.from('message_requests').select('id,status')
+    .eq('requester_id', me.id).eq('target_id', otherId).order('created_at', {ascending:false}).limit(1);
+  if(existing && existing.length && existing[0].status === 'pending'){
+    toast('طلب المراسلة السابق لـ' + otherName + ' لا يزال قيد الانتظار');
     document.getElementById('searchInput').value = '';
     document.getElementById('searchResults').innerHTML = '';
-    openChat(convId, otherName);
-    loadConversationsList();
-  }catch(err){ toast('تعذّر بدء المحادثة: ' + (err.message || '')); }
+    return;
+  }
+  const { error } = await sb.from('message_requests').insert({ requester_id: me.id, target_id: otherId, status: 'pending' });
+  if(error){ toast('تعذّر إرسال طلب المراسلة (تأكد من وجود جدول message_requests)'); return; }
+  toast('تم إرسال طلب مراسلة إلى ' + otherName + ' — سيصلك إشعار فور الموافقة');
+  document.getElementById('searchInput').value = '';
+  document.getElementById('searchResults').innerHTML = '';
+}
+ 
+async function loadPendingRequests(){
+  const box = document.getElementById('requestsList');
+  const label = document.getElementById('requestsLabel');
+  const { data: reqs, error } = await sb.from('message_requests').select('id,requester_id,created_at')
+    .eq('target_id', me.id).eq('status', 'pending').order('created_at', {ascending:false});
+  if(error || !reqs || !reqs.length){ box.innerHTML = ''; label.classList.add('hidden'); return; }
+  const requesterIds = [...new Set(reqs.map(r=>r.requester_id))];
+  const { data: profs } = await sb.from('profiles').select('id,username,display_name').in('id', requesterIds);
+  const profMap = {}; (profs||[]).forEach(p=> profMap[p.id]=p);
+ 
+  label.classList.remove('hidden');
+  box.innerHTML = '';
+  reqs.forEach(r=>{
+    const p = profMap[r.requester_id];
+    if(!p) return;
+    const el = document.createElement('div');
+    el.className = 'request-card';
+    el.innerHTML = `${avatarHtml(p.display_name)}
+      <div class="who">
+        <span class="name">${escapeHtml(p.display_name)}</span>
+        <span class="req-note">يريد مراسلتك — ${relTime(r.created_at)}</span>
+      </div>
+      <div class="request-actions">
+        <button class="req-accept">قبول</button>
+        <button class="req-decline">رفض</button>
+      </div>`;
+    el.querySelector('.req-accept').addEventListener('click', ()=> respondToRequest(r.id, r.requester_id, p.display_name, true));
+    el.querySelector('.req-decline').addEventListener('click', ()=> respondToRequest(r.id, r.requester_id, p.display_name, false));
+    box.appendChild(el);
+  });
+}
+ 
+async function respondToRequest(reqId, requesterId, requesterName, accept){
+  const status = accept ? 'accepted' : 'declined';
+  const { error } = await sb.from('message_requests').update({ status, responded_at: new Date().toISOString() }).eq('id', reqId);
+  if(error){ toast('تعذّر تحديث الطلب'); return; }
+  if(accept){
+    try{
+      const existing = await findExistingConversationWith(requesterId);
+      if(!existing) await createConversationRow(requesterId);
+      toast('تمت الموافقة على مراسلة ' + requesterName);
+      loadConversationsList();
+    }catch(err){ toast('تعذّر إنشاء المحادثة بعد القبول'); }
+  } else {
+    toast('تم رفض طلب مراسلة ' + requesterName);
+  }
+  loadPendingRequests();
+}
+ 
+/* اشتراك فوري: يصلني تنبيه بطلب وارد جديد، ويصل صاحب الطلب تنبيه فور موافقتي أو رفضي */
+function subscribeMessageRequests(){
+  sb.channel('msg-requests-'+me.id)
+    .on('postgres_changes', {event:'INSERT', schema:'public', table:'message_requests', filter:`target_id=eq.${me.id}`}, async payload=>{
+      const sender = await getProfileById(payload.new.requester_id);
+      toast('طلب مراسلة جديد من ' + (sender ? sender.display_name : 'شخص ما'));
+      loadPendingRequests();
+    })
+    .on('postgres_changes', {event:'UPDATE', schema:'public', table:'message_requests', filter:`requester_id=eq.${me.id}`}, async payload=>{
+      const row = payload.new;
+      if(row.status === 'accepted'){
+        const target = await getProfileById(row.target_id);
+        toast('تمت الموافقة على مراسلتك' + (target ? ' من ' + target.display_name : '') + ' — يمكنك الآن إرسال الرسائل');
+        loadConversationsList();
+      } else if(row.status === 'declined'){
+        toast('تم رفض طلب مراسلتك');
+      }
+    })
+    .subscribe();
 }
  
 /* ============ قائمة المحادثات ============ */
@@ -1002,6 +1132,7 @@ async function openChat(convId, otherName){
   activeConversationId = convId;
   lastRenderedDay = null;
   document.getElementById('chatWithName').textContent = otherName;
+  document.getElementById('chatWithStatus').textContent = 'متصل الآن';
   document.getElementById('chatAvatar').innerHTML = initials(otherName);
   document.getElementById('chatMessages').innerHTML = '';
   document.getElementById('chatView').classList.remove('hidden');
@@ -1021,6 +1152,7 @@ async function openChat(convId, otherName){
     })
     .on('broadcast', {event:'typing'}, payload=>{
       if(payload.payload && payload.payload.sender === me.id) return;
+      if(payload.payload && payload.payload.stopped){ hideTypingIndicator(); return; }
       showTypingIndicator();
     })
     .subscribe();
@@ -1034,6 +1166,10 @@ document.getElementById('chatBackBtn').addEventListener('click', ()=>{
  
 /* ============ مؤشر "يكتب الآن" ============ */
 let typingHideTimer = null;
+function typingPrefOn(){
+  const el = document.getElementById('prefTyping');
+  return !el || el.checked;
+}
 function showTypingIndicator(){
   let el = document.getElementById('typingBubble');
   if(!el){
@@ -1044,22 +1180,40 @@ function showTypingIndicator(){
     document.getElementById('chatMessages').appendChild(el);
     scrollChatBottom();
   }
+  const statusEl = document.getElementById('chatWithStatus');
+  if(statusEl) statusEl.textContent = 'يكتب الآن...';
   clearTimeout(typingHideTimer);
-  typingHideTimer = setTimeout(hideTypingIndicator, 2500);
+  // شبكة أمان: إن لم يصل حدث "توقف عن الكتابة" لأي سبب (تقطّع اتصال مثلاً)، يختفي المؤشر تلقائيًا
+  typingHideTimer = setTimeout(hideTypingIndicator, 4000);
 }
 function hideTypingIndicator(){
   clearTimeout(typingHideTimer);
   const el = document.getElementById('typingBubble');
   if(el) el.remove();
+  const statusEl = document.getElementById('chatWithStatus');
+  if(statusEl) statusEl.textContent = 'متصل الآن';
 }
 let lastTypingBroadcast = 0;
-document.getElementById('msgInput').addEventListener('input', ()=>{
-  if(!activeChannel || !activeConversationId) return;
-  if(document.getElementById('prefTyping') && !document.getElementById('prefTyping').checked) return;
+let stopTypingTimer = null;
+function sendStopTyping(){
+  if(!activeChannel || !activeConversationId || !typingPrefOn()) return;
+  activeChannel.send({ type:'broadcast', event:'typing', payload:{ sender: me.id, stopped: true } });
+  lastTypingBroadcast = 0;
+}
+document.getElementById('msgInput').addEventListener('input', (e)=>{
+  if(!activeChannel || !activeConversationId || !typingPrefOn()) return;
+  clearTimeout(stopTypingTimer);
+  if(!e.target.value.trim()){
+    sendStopTyping();
+    return;
+  }
   const now = Date.now();
-  if(now - lastTypingBroadcast < 1800) return;
-  lastTypingBroadcast = now;
-  activeChannel.send({ type:'broadcast', event:'typing', payload:{ sender: me.id } });
+  if(now - lastTypingBroadcast >= 1800){
+    lastTypingBroadcast = now;
+    activeChannel.send({ type:'broadcast', event:'typing', payload:{ sender: me.id } });
+  }
+  // إن توقف المستخدم عن الكتابة فعليًا (دون إرسال) لثانيتين، أرسل "توقف" ليختفي المؤشر عند الطرف الآخر فورًا
+  stopTypingTimer = setTimeout(sendStopTyping, 2000);
 });
 function scrollChatBottom(){
   const box = document.getElementById('chatMessages');
@@ -1124,6 +1278,8 @@ async function sendTextMessage(){
   const text = input.value.trim();
   if(!text || !activeConversationId) return;
   input.value = '';
+  clearTimeout(stopTypingTimer);
+  sendStopTyping();
   const { data, error } = await sb.from('messages').insert({ conversation_id: activeConversationId, sender_id: me.id, type: 'text', content: text }).select().single();
   if(error){ toast('تعذّر إرسال الرسالة'); return; }
   renderMessage(data);
@@ -1184,6 +1340,116 @@ document.getElementById('micBtn').addEventListener('click', async ()=>{
 });
  
 /* ============ إشعارات فورية عامة ============ */
+const profileCache = {};
+async function getProfileById(id){
+  if(profileCache[id]) return profileCache[id];
+  const { data } = await sb.from('profiles').select('id,username,display_name').eq('id', id).single();
+  if(data) profileCache[id] = data;
+  return data;
+}
+ 
+function notifyPrefOn(){
+  const el = document.getElementById('prefNotify');
+  return el ? el.checked : false;
+}
+ 
+/* يعكس حالة إذن المتصفح الفعلية على واجهة المفتاح:
+   - "denied": المفتاح يبقى مقفلاً تمامًا (disabled) ومطفأً — لا توجد طريقة لتفعيله
+     برمجيًا بعد الرفض؛ يجب فتحه يدويًا من إعدادات الموقع في المتصفح.
+   - "default": المفتاح قابل للضغط ليطلب الإذن الصريح من المتصفح.
+   - "granted": المفتاح يعمل بشكل طبيعي. */
+function updateNotifyStatusUI(){
+  const el = document.getElementById('prefNotify');
+  const sub = document.getElementById('notifyStatusSub');
+  if(!el || !sub) return;
+  if(!('Notification' in window)){
+    sub.textContent = 'المتصفح لا يدعم إشعارات النظام';
+    el.disabled = true; el.checked = false;
+    return;
+  }
+  if(Notification.permission === 'granted'){
+    sub.textContent = 'مفعّلة — سيصلك إشعار عند وصول أي رسالة';
+    sub.className = 't-sub ok';
+    el.disabled = false;
+  } else if(Notification.permission === 'denied'){
+    sub.textContent = 'مقفلة: تم رفض الإذن من المتصفح — فعّلها يدويًا من إعدادات الموقع (أيقونة القفل بجانب الرابط) للسماح بالإشعارات';
+    sub.className = 't-sub warn';
+    el.checked = false;
+    el.disabled = true; // قفل فعلي: لا يمكن حتى الضغط على المفتاح لحين منح الإذن من المتصفح نفسه
+  } else {
+    sub.textContent = 'فعّل المفتاح لطلب إذن الإشعارات الصريح من المتصفح';
+    sub.className = 't-sub';
+    el.disabled = false;
+  }
+}
+ 
+/* عند الدخول للتطبيق: إن كان مفتاح الإشعارات مفعّلًا (افتراضيًا أو من إعداد محفوظ سابقًا)
+   ولم يُمنح الإذن بعد، نطلبه صراحةً فورًا بدل الانتظار حتى يضغط المستخدم على المفتاح يدويًا. */
+async function ensureNotifyPermissionOnLoad(){
+  const el = document.getElementById('prefNotify');
+  if(!el || !('Notification' in window)){ updateNotifyStatusUI(); return; }
+  if(el.checked && Notification.permission === 'default'){
+    try{
+      const result = await Notification.requestPermission();
+      if(result !== 'granted'){ el.checked = false; savePrefs(); }
+    }catch(e){ /* تجاهل بصمت */ }
+  }
+  updateNotifyStatusUI();
+}
+ 
+/* يُستدعى عند تفاعل المستخدم مباشرةً مع مفتاح "إشعارات الرسائل" —
+   هذه لحظة تفاعل مباشر، لذا يمكننا طلب الإذن الصريح من المتصفح هنا. */
+async function handleNotifyToggle(){
+  const el = document.getElementById('prefNotify');
+  if(!el.checked){ savePrefs(); updateNotifyStatusUI(); return; }
+  if(!('Notification' in window)){
+    toast('المتصفح المستخدم لا يدعم إشعارات النظام');
+    el.checked = false; savePrefs(); updateNotifyStatusUI(); return;
+  }
+  if(Notification.permission === 'granted'){
+    toast('تم تفعيل إشعارات الرسائل');
+    savePrefs(); updateNotifyStatusUI();
+    return;
+  }
+  if(Notification.permission === 'denied'){
+    // لا يُفترض أن نصل لهذه الحالة أصلاً لأن المفتاح يكون مقفلاً (disabled)، لكن نتحقق احتياطًا
+    toast('الإشعارات محظورة من إعدادات المتصفح لهذا الموقع. فعّلها يدويًا من إعدادات الموقع ثم أعد المحاولة.');
+    el.checked = false; savePrefs(); updateNotifyStatusUI();
+    return;
+  }
+  // permission === 'default' → نعرض طلب الإذن الصريح من المتصفح الآن (لا يمكن أن يبقى الخيار مفعّلاً بدون هذا الإذن)
+  try{
+    const result = await Notification.requestPermission();
+    if(result === 'granted'){
+      toast('تم منح الإذن — إشعارات الرسائل مفعّلة الآن');
+    } else {
+      toast('لن تصلك إشعارات لأنه لم يُمنح الإذن الصريح');
+      el.checked = false;
+    }
+  }catch(e){
+    toast('تعذّر طلب إذن الإشعارات');
+    el.checked = false;
+  }
+  savePrefs();
+  updateNotifyStatusUI();
+}
+ 
+/* يرسل إشعار نظام فعليًا عند وصول رسالة، بشرط أن يكون المفتاح مفعّلًا
+   والإذن ممنوحًا فعليًا من المتصفح — بغض النظر عمّن أرسل الرسالة. */
+async function maybeSendNotification(m){
+  if(!notifyPrefOn()) return;
+  if(!('Notification' in window) || Notification.permission !== 'granted') return;
+  // نتجنّب إظهار إشعار نظام مكرر إن كان المستخدم ينظر فعليًا لنفس المحادثة والصفحة ظاهرة أمامه
+  if(m.conversation_id === activeConversationId && !document.hidden) return;
+  const sender = await getProfileById(m.sender_id);
+  const senderName = sender ? sender.display_name : 'شخص ما';
+  const body = m.type === 'text' ? m.content : (m.type === 'image' ? '📷 صورة' : '🎙 رسالة صوتية');
+  try{
+    const n = new Notification('مِداد — ' + senderName, { body, tag: 'midad-conv-' + m.conversation_id });
+    n.onclick = ()=>{ window.focus(); n.close(); };
+  }catch(e){ /* بعض المتصفحات قد ترفض الإنشاء المباشر، نتجاهل بصمت */ }
+}
+ 
 function subscribeGlobalMessages(){
   sb.channel('global-messages')
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'messages'}, async payload=>{
@@ -1197,14 +1463,9 @@ function subscribeGlobalMessages(){
          فإن قناة المحادثة الخاصة (activeChannel) هي المسؤولة عن عرضها.
          عرضها في القناتين معًا هو سبب ظهور كل رسالة واردة مرتين. */
       if(m.conversation_id !== activeConversationId){
-        const notifyEnabled = !document.getElementById('prefNotify') || document.getElementById('prefNotify').checked;
-        if(notifyEnabled){
-          toast('رسالة جديدة');
-          if(window.Notification && Notification.permission === 'granted' && document.hidden){
-            new Notification('مِداد', { body: 'لديك رسالة جديدة' });
-          }
-        }
+        toast('رسالة جديدة');
       }
+      maybeSendNotification(m);
       loadConversationsList();
     })
     .on('postgres_changes', {event:'INSERT', schema:'public', table:'conversation_members', filter:`user_id=eq.${me.id}`}, ()=>{
@@ -1248,8 +1509,11 @@ document.getElementById('saveBioBtn').addEventListener('click', async ()=>{
   toast('تم حفظ النبذة');
 });
  
-/* ============ الحساب: التفضيلات (محفوظة محليًا على هذا الجهاز) ============ */
-const PREF_KEYS = ['prefNotify','prefSound','prefTyping','prefOpenDm','prefTheme','prefFontSize'];
+/* ============ الحساب: التفضيلات (محفوظة محليًا على هذا الجهاز) ============
+   ملاحظة: "السماح لأي شخص بمراسلتي" ليس ضمن هذه القائمة لأنه إعداد يجب أن
+   يراه المستخدمون الآخرون قبل مراسلتك، لذا مصدره الحقيقي هو عمود
+   profiles.allow_open_dm في قاعدة البيانات، لا التخزين المحلي. */
+const PREF_KEYS = ['prefNotify','prefSound','prefTyping','prefTheme','prefFontSize'];
 function loadPrefs(){
   try{
     const saved = JSON.parse(localStorage.getItem('midad_prefs_'+me.id) || '{}');
@@ -1270,6 +1534,9 @@ function savePrefs(){
   });
   try{ localStorage.setItem('midad_prefs_'+me.id, JSON.stringify(obj)); }catch(e){/* تجاهل */}
 }
+/* حجم الخط ولون الواجهة يُطبَّقان عبر متغيّرات CSS على مستوى الصفحة (documentElement)،
+   بحيث تنعكس القيمة تلقائيًا على كل فقاعات المحادثة — الحالية والمستقبلية — بلا حاجة
+   لأي تعديل يدوي على كل رسالة تُرسم. */
 function applyThemePref(){
   const theme = document.getElementById('prefTheme').value;
   const themes = {
@@ -1282,13 +1549,34 @@ function applyThemePref(){
   document.documentElement.style.setProperty('--amber-dark', t.dark);
   const sizes = { small:'13.5px', medium:'14.5px', large:'16.5px' };
   document.documentElement.style.setProperty('--chat-font-size', sizes[document.getElementById('prefFontSize').value] || '14.5px');
-  document.querySelectorAll('.bubble').forEach(b=> b.style.fontSize = sizes[document.getElementById('prefFontSize').value] || '14.5px');
 }
 PREF_KEYS.forEach(k=>{
   document.addEventListener('DOMContentLoaded', ()=>{
     const el = document.getElementById(k);
     if(!el) return;
+    if(k === 'prefNotify'){
+      // مفتاح الإشعارات له مسار خاص: يتحقق من إذن المتصفح ويطلبه صراحةً عند التفعيل
+      el.addEventListener('change', handleNotifyToggle);
+      return;
+    }
     el.addEventListener('change', ()=>{ savePrefs(); if(k==='prefTheme' || k==='prefFontSize') applyThemePref(); toast('تم حفظ الإعداد'); });
+  });
+});
+ 
+/* ============ الحساب: السماح بالمراسلة (مُخزَّن في قاعدة البيانات، يراه الآخرون) ============ */
+document.addEventListener('DOMContentLoaded', ()=>{
+  const el = document.getElementById('prefOpenDm');
+  if(!el) return;
+  el.addEventListener('change', async ()=>{
+    const desired = el.checked;
+    const { error } = await sb.from('profiles').update({ allow_open_dm: desired }).eq('id', me.id);
+    if(error){
+      toast('تعذّر حفظ الإعداد (تأكد من وجود عمود allow_open_dm في جدول profiles)');
+      el.checked = !desired; // تراجع بصريًا لأن الحفظ فشل
+      return;
+    }
+    me.allow_open_dm = desired;
+    toast(desired ? 'يمكن لأي شخص مراسلتك الآن مباشرة' : 'أصبحت المراسلة تتطلب طلبًا وموافقتك أولًا');
   });
 });
  
