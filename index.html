@@ -1376,19 +1376,14 @@ function updateNotifyStatusUI(){
     el.disabled = true; el.checked = false;
     return;
   }
+  el.disabled = false; // المفتاح قابل للضغط دائمًا — الضغط عليه هو ما يستدعي إذن المتصفح
   if(Notification.permission === 'granted'){
     sub.textContent = 'مفعّلة — سيصلك إشعار عند وصول أي رسالة';
     sub.className = 't-sub ok';
-    el.disabled = false;
-  } else if(Notification.permission === 'denied'){
-    sub.textContent = 'مقفلة: تم رفض الإذن من المتصفح — فعّلها يدويًا من إعدادات الموقع (أيقونة القفل بجانب الرابط) للسماح بالإشعارات';
-    sub.className = 't-sub warn';
-    el.checked = false;
-    el.disabled = true; // قفل فعلي: لا يمكن حتى الضغط على المفتاح لحين منح الإذن من المتصفح نفسه
   } else {
-    sub.textContent = 'فعّل المفتاح لطلب إذن الإشعارات الصريح من المتصفح';
+    sub.textContent = 'اضغط المفتاح لطلب إذن الإشعارات من المتصفح';
     sub.className = 't-sub';
-    el.disabled = false;
+    el.checked = false;
   }
 }
  
@@ -1420,34 +1415,17 @@ async function handleNotifyToggle(){
     toast('المتصفح المستخدم لا يدعم إشعارات النظام');
     el.checked = false; savePrefs(); updateNotifyStatusUI(); return;
   }
-  if(!window.isSecureContext){
-    toast('الإشعارات تتطلب اتصال HTTPS آمن (أو تشغيل الصفحة محليًا عبر localhost)، فتعذّر تفعيلها هنا');
-    el.checked = false; savePrefs(); updateNotifyStatusUI(); return;
-  }
-  if(Notification.permission === 'granted'){
-    toast('تم تفعيل إشعارات الرسائل');
-    savePrefs(); updateNotifyStatusUI();
-    await subscribeToPush().catch(()=>{ toast('تم تفعيل الإشعارات المحلية، لكن تعذّر تفعيل إشعارات الدفع (Push) — تحقق من وجود ملف sw.js بجانب الصفحة'); });
-    return;
-  }
-  if(Notification.permission === 'denied'){
-    // لا يُفترض أن نصل لهذه الحالة أصلاً لأن المفتاح يكون مقفلاً (disabled)، لكن نتحقق احتياطًا
-    toast('الإشعارات محظورة من إعدادات المتصفح لهذا الموقع. فعّلها يدويًا من إعدادات الموقع ثم أعد المحاولة.');
-    el.checked = false; savePrefs(); updateNotifyStatusUI();
-    return;
-  }
-  // permission === 'default' → نعرض طلب الإذن الصريح من المتصفح الآن (لا يمكن أن يبقى الخيار مفعّلاً بدون هذا الإذن)
+  // نطلب الإذن من المتصفح مباشرة عند الضغط — هذا يعرض نافذة الإذن الفعلية إن لم يُبتّ فيها
+  // من قبل. إن كان قد تقرر مسبقًا (granted أو denied)، يرجع المتصفح القيمة فورًا بلا نافذة.
   try{
     const result = await Notification.requestPermission();
     if(result === 'granted'){
-      toast('تم منح الإذن — إشعارات الرسائل مفعّلة الآن');
-      await subscribeToPush().catch(()=>{ toast('تعذّر تفعيل إشعارات الدفع (Push)'); });
+      toast('تم تفعيل إشعارات الرسائل');
+      await subscribeToPush().catch(()=>{});
     } else {
-      toast('لن تصلك إشعارات لأنه لم يُمنح الإذن الصريح');
       el.checked = false;
     }
   }catch(e){
-    toast('تعذّر طلب إذن الإشعارات');
     el.checked = false;
   }
   savePrefs();
